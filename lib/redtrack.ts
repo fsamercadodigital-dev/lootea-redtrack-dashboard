@@ -4,6 +4,7 @@ import { addDays, mexicoToday } from "./dates";
 import { campaignIdFor } from "./campaigns";
 import { CACHE_TTL_MS, LOOKBACK_DAYS, PAGE_SIZE, type BuyerId } from "./config";
 import { groupRows, type RawRow } from "./metrics";
+import { readReportRows } from "./report-body";
 import { buildReportUrl } from "./report-url";
 import type { ReportPayload } from "./types";
 
@@ -63,7 +64,8 @@ async function fetchPage(
     throw new ReportError("leitura da resposta", 502, "A resposta do RedTrack não pôde ser lida.");
   }
 
-  if (!body || typeof body !== "object" || !Array.isArray((body as { items?: unknown }).items)) {
+  const rows = readReportRows(body);
+  if (!rows) {
     throw new ReportError(
       "leitura da resposta",
       502,
@@ -71,7 +73,7 @@ async function fetchPage(
     );
   }
 
-  return (body as { items: RawRow[] }).items;
+  return rows;
 }
 
 async function fetchAllPages(
@@ -85,6 +87,7 @@ async function fetchAllPages(
   for (let page = 1; page <= 20; page += 1) {
     const items = await fetchPage(apiKey, from, to, page, campaignId, refresh);
     rows.push(...items);
+    // Página cheia: ainda pode haver a próxima. Menos que `per` encerra.
     if (items.length < PAGE_SIZE) return rows;
   }
   throw new ReportError(

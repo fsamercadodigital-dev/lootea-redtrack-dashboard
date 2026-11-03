@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { campaignIdFor } from "./campaigns";
 import { DEFAULT_THRESHOLDS, sanitizeThresholds } from "./config";
+import { readReportRows } from "./report-body";
 import { addDays, mexicoToday, periodRange } from "./dates";
 import { buildCreativeRows, groupRows, summarize, type RawRow } from "./metrics";
 import { buildReportUrl, REPORT_FIELDS } from "./report-url";
@@ -250,6 +251,28 @@ test("datas de período e fuso da Cidade do México", () => {
   assert.deepEqual(periodRange("2026-11-03", "7"), { from: "2026-10-28", to: "2026-11-03" });
   assert.deepEqual(periodRange("2026-11-03", "14"), { from: "2026-10-21", to: "2026-11-03" });
   assert.equal(addDays("2026-11-03", -29), "2026-10-05");
+});
+
+test("aceita o array puro do RedTrack e também o objeto com items", () => {
+  const row = {
+    clicks: 0,
+    convtype2: 1.5,
+    cost: 1.25,
+    date: "2026-10-22",
+    rt_ad: "ELEKTRARIFA-HOOK1-CLOSE1",
+    rt_ad_id: "120246834964730138",
+  };
+  const fromArray = readReportRows([row]);
+  const fromObject = readReportRows({ items: [row], pagination: { total: 0 } });
+  assert.equal(fromArray?.length, 1);
+  assert.deepEqual(fromObject, fromArray);
+  assert.equal(readReportRows({ ok: true }), null);
+  assert.equal(readReportRows(null), null);
+
+  const [creative] = groupRows(fromArray ?? []);
+  assert.equal(creative?.days[0]?.clicks, 0);
+  assert.equal(creative?.days[0]?.cost, 1.25);
+  assert.equal(creative?.days[0]?.deposits, 1.5);
 });
 
 test("cada comprador aponta para a campanha certa e Todos Meta não filtra campanha", () => {
