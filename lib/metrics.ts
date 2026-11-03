@@ -265,11 +265,12 @@ export function rowsForPeriod(
 }
 
 export function summarize(rows: CreativeRow[], thresholds: Thresholds): Summary {
+  const spend = rows.reduce((total, row) => total + row.spend, 0);
+  const ftds = rows.reduce((total, row) => total + row.ftds, 0);
   const tracked = rows.filter((row) => row.tracked);
-  const spend = tracked.reduce((total, row) => total + row.spend, 0);
-  const ftds = tracked.reduce((total, row) => total + row.ftds, 0);
+  const trackedSpend = tracked.reduce((total, row) => total + row.spend, 0);
   const revenue = tracked.reduce((total, row) => total + row.cohortRevenue, 0);
-  const cohortRoas = roas(revenue, spend);
+  const cohortRoas = roas(revenue, trackedSpend);
   return {
     spend,
     ftds,

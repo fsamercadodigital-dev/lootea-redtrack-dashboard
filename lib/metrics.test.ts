@@ -232,10 +232,11 @@ test("resumo soma a conta e não a média dos ROAS", () => {
     DEFAULT_THRESHOLDS,
   );
   const summary = summarize(rows, DEFAULT_THRESHOLDS);
-  assert.equal(summary.spend, 0);
-  assert.equal(summary.ftds, 0);
-  assert.equal(summary.cpaFtd, null);
+  assert.equal(summary.spend, 100);
+  assert.equal(summary.ftds, 5);
+  assert.equal(summary.cpaFtd, 20);
   assert.equal(summary.cohortRoas, null);
+  assert.equal(summary.scaleBar, null);
   assert.equal(summary.semVeredito, 2);
 });
 

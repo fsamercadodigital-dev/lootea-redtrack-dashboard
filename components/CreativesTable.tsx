@@ -183,7 +183,10 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
               <td className="num">{formatPercent(row.legacyShare)}</td>
               <td className="left">
                 <div className="action">
-                  <span className={`badge ${row.decision.verdict}`}>{VERDICT_LABEL[row.decision.verdict]}</span>
+                  <span className="verdict">
+                    <span className={`dot ${row.decision.verdict}`} aria-hidden="true" />
+                    {VERDICT_LABEL[row.decision.verdict]}
+                  </span>
                   <span className="motivo">{row.decision.motivo}</span>
                   {row.decision.alerts.length > 0 ? (
                     <span className="tags">

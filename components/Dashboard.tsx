@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchReport, ClientReportError } from "@/lib/client-report";
 import { BUYERS, DEFAULT_THRESHOLDS, type BuyerId, type Thresholds } from "@/lib/config";
-import { addDays, formatShortDate, mexicoToday, PERIODS, formatStamp, type PeriodId } from "@/lib/dates";
+import { addDays, formatClock, mexicoToday, PERIODS, type PeriodId } from "@/lib/dates";
 import type { Verdict } from "@/lib/decision";
 import { buildCreativeRows, summarize } from "@/lib/metrics";
 import { readStoredThresholds, storeThresholds } from "@/lib/settings";
@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [thresholds, setThresholds] = useState<Thresholds>(DEFAULT_THRESHOLDS);
   const [settingsReady, setSettingsReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [action, setAction] = useState<ActionFilter>("todas");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("spend");
@@ -107,8 +108,6 @@ export default function Dashboard() {
     });
   }, [rows, action, search]);
 
-  const buyerLabel = BUYERS.find((item) => item.id === buyer)?.label ?? "Todas as contas";
-
   function choosePeriod(next: PeriodId) {
     if (next === "custom" && (!customFrom || !customTo)) {
       const today = mexicoToday();
@@ -129,74 +128,80 @@ export default function Dashboard() {
 
   return (
     <main className="page">
-      <header className="top">
+      <header className="bar">
         <div className="brand">
-          <h1 className="sr-only">Lootea Meta</h1>
-          <p className="logo" aria-hidden="true">Lootea</p>
-          <span className="meta-label">
-            <svg viewBox="0 0 20 12" aria-hidden="true" className="meta-mark">
-              <path
-                fill="#0668E1"
-                d="M5.2 6c0-1.5.7-2.6 1.9-2.6.7 0 1.2.3 1.6.9.4-.6.9-.9 1.6-.9 1.2 0 1.9 1.1 1.9 2.6S11.5 8.6 10.3 8.6c-.7 0-1.2-.3-1.6-.9-.4.6-.9.9-1.6.9C5.9 8.6 5.2 7.5 5.2 6zm-4 0c0-1.5.7-2.6 1.9-2.6.7 0 1.2.3 1.6.9.4-.6.9-.9 1.6-.9.3 0 .6.1.8.2-.5.6-.8 1.5-.8 2.4s.3 1.8.8 2.4c-.2.1-.5.2-.8.2-.7 0-1.2-.3-1.6-.9-.4.6-.9.9-1.6.9C1.9 8.6 1.2 7.5 1.2 6z"
-              />
-            </svg>
-            Meta
-          </span>
+          <h1>Lootea</h1>
+          <span className="meta">Meta</span>
+          <button
+            type="button"
+            className="info"
+            aria-expanded={infoOpen}
+            aria-label="Como ler o painel"
+            onClick={() => setInfoOpen((open) => !open)}
+          >
+            i
+          </button>
+          {infoOpen ? (
+            <p className="info-pop" role="note">
+              Dia 0 é o primeiro dia com gasto, até hoje na Cidade do México. Gasto e FTDs somam todos os
+              criativos do filtro. ROAS e a barra usam só conjuntos com nome [E], [F] ou [D] seguido de data.
+              Custo por anúncio é aproximado enquanto o RedTrack sincroniza custo por conjunto.
+            </p>
+          ) : null}
         </div>
-        <button
-          type="button"
-          className="primary"
-          onClick={() =>
-            load(buyer, period, true, period === "custom" ? { from: customFrom, to: customTo } : undefined)
-          }
-          disabled={loading}
-        >
-          {loading ? "Atualizando…" : "Atualizar"}
-        </button>
-      </header>
-
-      <div className="toolbar">
-        <div className="periods" role="group" aria-label="Período">
-          {PERIODS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={item.id === period ? "segment selected" : "segment"}
-              aria-pressed={item.id === period}
-              onClick={() => choosePeriod(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        {period === "custom" ? (
-          <div className="custom-range">
-            <label>
-              De
-              <input type="date" value={customFrom} max={customTo || undefined} onChange={(event) => setCustomFrom(event.target.value)} />
-            </label>
-            <label>
-              Até
-              <input type="date" value={customTo} min={customFrom || undefined} max={mexicoToday()} onChange={(event) => setCustomTo(event.target.value)} />
-            </label>
-          </div>
-        ) : null}
-        <label className="buyer">
-          <span className="sr-only">Conta</span>
-          <select value={buyer} onChange={(event) => setBuyer(event.target.value as BuyerId)}>
-            {BUYERS.map((item) => (
-              <option key={item.id} value={item.id}>
+        <div className="controls">
+          <div className="periods" role="group" aria-label="Período">
+            {PERIODS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={item.id === period ? "segment selected" : "segment"}
+                aria-pressed={item.id === period}
+                onClick={() => choosePeriod(item.id)}
+              >
                 {item.label}
-              </option>
+              </button>
             ))}
-          </select>
-        </label>
-        <p className="updated">
-          {report
-            ? `Atualizado em ${formatStamp(report.fetchedAt)} (Cidade do México)`
-            : "Ainda sem atualização"}
-        </p>
-      </div>
+          </div>
+          {period === "custom" ? (
+            <div className="custom-range">
+              <input type="date" aria-label="De" value={customFrom} max={customTo || undefined} onChange={(event) => setCustomFrom(event.target.value)} />
+              <input type="date" aria-label="Até" value={customTo} min={customFrom || undefined} max={mexicoToday()} onChange={(event) => setCustomTo(event.target.value)} />
+            </div>
+          ) : null}
+          <label className="buyer">
+            <span className="sr-only">Conta</span>
+            <select value={buyer} onChange={(event) => setBuyer(event.target.value as BuyerId)}>
+              {BUYERS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="updated">{report ? `Atualizado ${formatClock(report.fetchedAt)}` : "Atualizado —"}</p>
+          <button
+            type="button"
+            className="icon"
+            aria-label="Atualizar"
+            onClick={() =>
+              load(buyer, period, true, period === "custom" ? { from: customFrom, to: customTo } : undefined)
+            }
+            disabled={loading}
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M13.5 8a5.5 5.5 0 1 1-1.4-3.6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+              <path d="M13.6 2.8v2.6H11" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </header>
 
       {error ? (
         <div className="banner error" role="alert">
@@ -216,19 +221,7 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      {report ? (
-        <>
-          <p className="scope">
-            {buyerLabel}
-            {" · "}
-            {formatShortDate(report.periodFrom)}
-            {report.periodFrom !== report.periodTo ? ` a ${formatShortDate(report.periodTo)}` : ""}
-            {" · "}
-            {rows.length} {rows.length === 1 ? "criativo" : "criativos"}
-          </p>
-          <SummaryCards summary={summary} action={action} onAction={setAction} />
-        </>
-      ) : null}
+      {report ? <SummaryCards summary={summary} /> : null}
 
       <div className="filters">
         <label className="search">
@@ -236,55 +229,50 @@ export default function Dashboard() {
           <input
             type="search"
             value={search}
-            placeholder="Buscar por nome ou ID"
+            placeholder="Buscar"
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
-        <div className="chips" role="group" aria-label="Filtrar por ação">
+        <div className="tabs" role="group" aria-label="Filtrar por ação">
           {(
             [
-              ["todas", "Todas"],
-              ["escalar", "Escalar"],
-              ["manter", "Manter"],
-              ["descartar", "Descartar"],
-              ["sem-veredito", "Sem veredito"],
+              ["todas", "Todas", rows.length],
+              ["escalar", "Escalar", summary.escalar],
+              ["manter", "Manter", summary.manter],
+              ["descartar", "Descartar", summary.descartar],
+              ["sem-veredito", "Sem veredito", summary.semVeredito],
             ] as const
-          ).map(([item, label]) => (
+          ).map(([item, label, count]) => (
             <button
               key={item}
               type="button"
-              className={action === item ? "chip selected" : "chip"}
+              className={action === item ? "tab selected" : "tab"}
               aria-pressed={action === item}
               onClick={() => setAction(item)}
             >
-              {label}
+              {label} {count}
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          className="ghost"
-          aria-expanded={settingsOpen}
-          onClick={() => setSettingsOpen((open) => !open)}
-        >
+        <button type="button" className="link" aria-expanded={settingsOpen} onClick={() => setSettingsOpen(true)}>
           Critérios
         </button>
       </div>
 
-      {settingsOpen ? <SettingsPanel thresholds={thresholds} onChange={setThresholds} /> : null}
-
-      {report?.cohortMode === "proxy" ? (
-        <div className="banner error" role="status">
-          <strong>cohort indisponível – usando Ad Tracking</strong>
+      {settingsOpen ? (
+        <div className="drawer-root">
+          <button type="button" className="backdrop" aria-label="Fechar critérios" onClick={() => setSettingsOpen(false)} />
+          <aside className="drawer" role="dialog" aria-label="Critérios">
+            <button type="button" className="link close" onClick={() => setSettingsOpen(false)}>
+              Fechar
+            </button>
+            <SettingsPanel thresholds={thresholds} onChange={setThresholds} />
+          </aside>
         </div>
       ) : null}
 
-      {report ? (
-        <p className="note">
-          Dia 0 é o primeiro dia com gasto, contado até hoje na Cidade do México. Gasto, registros e FTDs são
-          do período. Os cartões de média usam só anúncios com conjunto [E], [F] ou [D] mais data. Os demais
-          ficam sem veredito.
-        </p>
+      {report?.cohortMode === "proxy" ? (
+        <p className="quiet">cohort indisponível – usando Ad Tracking</p>
       ) : null}
 
       {report && visibleRows.length === 0 ? (
@@ -301,9 +289,6 @@ export default function Dashboard() {
         <CreativesTable rows={visibleRows} sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
       ) : null}
 
-      <footer>
-        Custo por anúncio é aproximado enquanto o RedTrack sincroniza custo por conjunto.
-      </footer>
     </main>
   );
 }
