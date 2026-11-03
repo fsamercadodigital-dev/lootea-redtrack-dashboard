@@ -28,6 +28,9 @@ export type ReportPayload = {
   periodTo: string;
   buyer: string;
   cohortMode: CohortMode;
+  conversionTypes: string[];
+  conversionRows: number;
+  conversionFtdFlags: number;
   creatives: CreativeSeries[];
   cohorts: Record<string, { revenue: number; rpr: number | null; topCustomerShare: number | null; legacyShare: number | null }>;
 };

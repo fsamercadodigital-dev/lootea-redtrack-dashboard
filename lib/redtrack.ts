@@ -1,8 +1,8 @@
 import "server-only";
 
 import { campaignIdFor } from "./campaigns";
-import { buildCohorts, type ConvEvent } from "./cohort";
-import { loadConversionEvents } from "./conversions";
+import { buildCohorts, cohortIsUsable, type ConvEvent } from "./cohort";
+import { loadConversionEvents, type ConversionLoad } from "./conversions";
 import { CACHE_TTL_MS, LOOKBACK_DAYS, PAGE_SIZE, type BuyerId } from "./config";
 import { addDays, mexicoToday, periodRange, type PeriodId } from "./dates";
 import { groupRows, type RawRow } from "./metrics";
@@ -23,7 +23,7 @@ export class ReportError extends Error {
 }
 
 type ReportCacheEntry = { expires: number; rows: RawRow[] };
-type ConvCacheEntry = { expires: number; from: string; to: string; events: ConvEvent[] | null };
+type ConvCacheEntry = { expires: number; from: string; to: string; loaded: ConversionLoad | null };
 
 const REPORT_CACHE_KEY = "__looteaReportRows";
 const CONV_CACHE_KEY = "__looteaConversions";
@@ -129,13 +129,13 @@ async function loadRows(
   return rows;
 }
 
-async function loadEvents(apiKey: string, from: string, to: string, refresh: boolean): Promise<ConvEvent[] | null> {
+async function loadEvents(apiKey: string, from: string, to: string, refresh: boolean): Promise<ConversionLoad | null> {
   const cache = conversionCache();
   const hit = cache.current;
-  if (!refresh && hit && hit.expires > Date.now() && hit.from === from && hit.to === to) return hit.events;
-  const events = await loadConversionEvents(apiKey, from, to);
-  cache.current = { expires: Date.now() + CACHE_TTL_MS, from, to, events };
-  return events;
+  if (!refresh && hit && hit.expires > Date.now() && hit.from === from && hit.to === to) return hit.loaded;
+  const loaded = await loadConversionEvents(apiKey, from, to);
+  cache.current = { expires: Date.now() + CACHE_TTL_MS, from, to, loaded };
+  return loaded;
 }
 
 export async function getReport(
@@ -158,7 +158,8 @@ export async function getReport(
   const range = periodRange(today, period);
   const rows = await loadRows(apiKey, buyerId, from, to, refresh);
   const creatives = groupRows(rows);
-  const events = await loadEvents(apiKey, from, to, refresh);
+  const loaded = await loadEvents(apiKey, from, to, refresh);
+  const events: ConvEvent[] | null = loaded && cohortIsUsable(loaded.events) ? loaded.events : null;
   const cohortMode: CohortMode = events ? "full" : "proxy";
   const cohorts = events
     ? buildCohorts(
@@ -186,6 +187,9 @@ export async function getReport(
     periodTo: range.to,
     buyer: buyerId,
     cohortMode,
+    conversionTypes: loaded?.types ?? [],
+    conversionRows: loaded?.rows ?? 0,
+    conversionFtdFlags: loaded?.ftdFlags ?? 0,
     creatives,
     cohorts: cohortRecord,
   };

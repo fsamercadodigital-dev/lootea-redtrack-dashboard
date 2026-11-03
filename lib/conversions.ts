@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cohortIsUsable, toConvEvents, type ConvEvent } from "./cohort";
+import { toConvEvents, type ConvEvent } from "./cohort";
 import { CONVERSION_PAGE_CAP, CONVERSION_PAGE_SIZE, TIME_ZONE } from "./config";
 import { mexicoToday } from "./dates";
 import { readItemList } from "./report-body";
@@ -54,20 +54,39 @@ async function fetchPage(apiKey: string, from: string, to: string, page: number)
  * Log de conversões da janela. Null se o log não servir para a coorte.
  * Não filtra por source: depósito orgânico também entra na receita do usuário.
  */
-export async function loadConversionEvents(apiKey: string, from: string, to: string): Promise<ConvEvent[] | null> {
+export type ConversionLoad = {
+  events: ConvEvent[];
+  types: string[];
+  rows: number;
+  ftdFlags: number;
+};
+
+function flagCount(value: unknown): boolean {
+  return value === true || (typeof value === "number" && value > 0) || value === "1";
+}
+
+export async function loadConversionEvents(apiKey: string, from: string, to: string): Promise<ConversionLoad | null> {
   const events: ConvEvent[] = [];
+  const types = new Set<string>();
+  let rows = 0;
+  let ftdFlags = 0;
   try {
     for (let page = 1; page <= CONVERSION_PAGE_CAP; page += 1) {
       const items = await fetchPage(apiKey, from, to, page);
       for (const item of items) {
+        rows += 1;
+        if (item && typeof item === "object") {
+          const record = item as Record<string, unknown>;
+          if (record.type != null) types.add(String(record.type).slice(0, 40));
+          if (flagCount(record.type4)) ftdFlags += 1;
+        }
         events.push(...toConvEvents(item, eventDate));
       }
-      if (items.length < CONVERSION_PAGE_SIZE) {
-        return cohortIsUsable(events) ? events : null;
-      }
+      if (items.length < CONVERSION_PAGE_SIZE) break;
     }
   } catch {
     return null;
   }
-  return null;
+  if (rows === 0) return null;
+  return { events, types: Array.from(types).sort(), rows, ftdFlags };
 }
