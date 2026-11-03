@@ -3,7 +3,7 @@ import "server-only";
 import { campaignIdFor } from "./campaigns";
 import { CACHE_TTL_MS, LOOKBACK_DAYS, PAGE_SIZE, type BuyerId } from "./config";
 import { addDays, mexicoToday, periodRange, type PeriodId } from "./dates";
-import { groupRows, type RawRow } from "./metrics";
+import { groupRows, mergeBuyerBreakdown, type RawRow } from "./metrics";
 import { readReportRows } from "./report-body";
 import { buildReportUrl } from "./report-url";
 import type { ReportPayload } from "./types";
@@ -138,7 +138,22 @@ export async function getReport(
   const range = periodRange(today, period, custom);
   const lookbackFrom = addDays(today, -(LOOKBACK_DAYS - 1));
   const from = range.from < lookbackFrom ? range.from : lookbackFrom;
-  const rows = await loadRows(apiKey, buyerId, from, today, refresh);
+  const creatives =
+    buyerId === "all"
+      ? await (async () => {
+          const [allRows, felipe, erick, daniel] = await Promise.all([
+            loadRows(apiKey, "all", from, today, refresh),
+            loadRows(apiKey, "felipe", from, today, refresh),
+            loadRows(apiKey, "erick", from, today, refresh),
+            loadRows(apiKey, "daniel", from, today, refresh),
+          ]);
+          return mergeBuyerBreakdown(allRows, [
+            { buyer: "felipe", rows: felipe },
+            { buyer: "erick", rows: erick },
+            { buyer: "daniel", rows: daniel },
+          ]);
+        })()
+      : groupRows(await loadRows(apiKey, buyerId, from, today, refresh));
 
   return {
     ok: true,
@@ -150,7 +165,7 @@ export async function getReport(
     periodTo: range.to,
     buyer: buyerId,
     cohortMode: "proxy",
-    creatives: groupRows(rows),
+    creatives,
     cohorts: {},
   };
 }

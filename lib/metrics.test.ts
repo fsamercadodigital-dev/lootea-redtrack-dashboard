@@ -349,15 +349,14 @@ test("a URL pede o relatório v2 e não os campos prontos de ROAS", () => {
   assert.equal(all.origin, "https://api.redtrack.io");
   assert.equal(all.pathname, "/report/v2");
   assert.equal(all.searchParams.get("api_key"), "test-key");
-  assert.equal(all.searchParams.get("group"), "campaign_id,rt_ad_id,rt_ad,rt_adgroup,date");
-  assert.equal(all.searchParams.get("fields")?.includes("campaign_id"), true);
+  assert.equal(all.searchParams.get("group"), "rt_ad_id,rt_ad,rt_adgroup,date");
   assert.equal(all.searchParams.get("source_id"), "6ad59d1d78b93e5c029c71fe");
   assert.equal(all.searchParams.get("campaign_id"), null);
   assert.equal(all.searchParams.get("timezone"), "America/Mexico_City");
   assert.equal(all.searchParams.get("per"), "1000");
   assert.equal(all.searchParams.get("page"), "2");
   const fields = all.searchParams.get("fields")?.split(",") ?? [];
-  assert.deepEqual(fields, [...REPORT_FIELDS, "campaign_id"]);
+  assert.deepEqual(fields, REPORT_FIELDS);
   for (const blocked of ["roas", "profit", "cpa", "total_revenue"]) {
     assert.equal(fields.includes(blocked), false);
   }

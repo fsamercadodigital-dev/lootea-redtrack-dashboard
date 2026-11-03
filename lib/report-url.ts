@@ -29,11 +29,7 @@ export function buildReportUrl(options: {
 }): URL {
   const url = new URL("https://api.redtrack.io/report/v2");
   url.searchParams.set("api_key", options.apiKey);
-  const splitByBuyer = !options.campaignId;
-  url.searchParams.set(
-    "group",
-    splitByBuyer ? "campaign_id,rt_ad_id,rt_ad,rt_adgroup,date" : "rt_ad_id,rt_ad,rt_adgroup,date",
-  );
+  url.searchParams.set("group", "rt_ad_id,rt_ad,rt_adgroup,date");
   url.searchParams.set("date_from", options.from);
   url.searchParams.set("date_to", options.to);
   url.searchParams.set("timezone", "America/Mexico_City");
@@ -41,7 +37,7 @@ export function buildReportUrl(options: {
   if (options.campaignId) {
     url.searchParams.set("campaign_id", options.campaignId);
   }
-  url.searchParams.set("fields", (splitByBuyer ? [...FIELDS, "campaign_id"] : FIELDS).join(","));
+  url.searchParams.set("fields", FIELDS.join(","));
   url.searchParams.set("per", String(PAGE_SIZE));
   url.searchParams.set("page", String(options.page));
   return url;

@@ -252,6 +252,67 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
   }));
 }
 
+const DAY_METRICS = [
+  "clicks",
+  "impressions",
+  "cost",
+  "deposits",
+  "depositRevenue",
+  "signups",
+  "ftds",
+  "ftdRevenue",
+  "redeposits",
+] as const;
+
+function addPoint(target: DailyPoint, source: DailyPoint) {
+  for (const key of DAY_METRICS) target[key] += source[key];
+}
+
+function subtractPoint(parent: DailyPoint, taken: DailyPoint | undefined): DailyPoint {
+  const left = emptyDay(parent.date);
+  for (const key of DAY_METRICS) left[key] = parent[key] - (taken?.[key] ?? 0);
+  return left;
+}
+
+function hasSignal(day: DailyPoint): boolean {
+  return DAY_METRICS.some((key) => Math.abs(day[key]) > 0.0001);
+}
+
+/** Junta o relatório geral com o de cada gestor. O que sobra fica em Sem gestor. */
+export function mergeBuyerBreakdown(
+  allRows: RawRow[],
+  parts: { buyer: GestorId; rows: RawRow[] }[],
+): CreativeSeries[] {
+  const parents = groupRows(allRows);
+  const knownByName = new Map<string, NonNullable<CreativeSeries["buyers"]>>();
+  for (const part of parts) {
+    if (part.buyer === "other") continue;
+    for (const series of groupRows(part.rows.map((row) => ({ ...row, buyer: part.buyer })))) {
+      const list = knownByName.get(series.name) ?? [];
+      if (series.days.length > 0) list.push({ buyer: part.buyer, adset: series.adset, days: series.days });
+      knownByName.set(series.name, list);
+    }
+  }
+
+  return parents.map((parent) => {
+    const known = knownByName.get(parent.name) ?? [];
+    const taken = new Map<string, DailyPoint>();
+    for (const slice of known) {
+      for (const day of slice.days) {
+        const acc = taken.get(day.date) ?? emptyDay(day.date);
+        addPoint(acc, day);
+        taken.set(day.date, acc);
+      }
+    }
+    const otherDays = parent.days.map((day) => subtractPoint(day, taken.get(day.date))).filter(hasSignal);
+    const buyers = [
+      ...GESTOR_ORDER.filter((buyer) => buyer !== "other").flatMap((buyer) => known.filter((slice) => slice.buyer === buyer)),
+      ...(otherDays.length ? [{ buyer: "other" as const, adset: "", days: otherDays }] : []),
+    ];
+    return { ...parent, buyers };
+  });
+}
+
 function sumBy(days: DailyPoint[], pick: (day: DailyPoint) => number): number {
   return days.reduce((total, day) => total + pick(day), 0);
 }
