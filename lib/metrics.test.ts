@@ -349,14 +349,15 @@ test("a URL pede o relatório v2 e não os campos prontos de ROAS", () => {
   assert.equal(all.origin, "https://api.redtrack.io");
   assert.equal(all.pathname, "/report/v2");
   assert.equal(all.searchParams.get("api_key"), "test-key");
-  assert.equal(all.searchParams.get("group"), "rt_ad_id,rt_ad,rt_adgroup,date");
+  assert.equal(all.searchParams.get("group"), "campaign_id,rt_ad_id,rt_ad,rt_adgroup,date");
+  assert.equal(all.searchParams.get("fields")?.includes("campaign_id"), true);
   assert.equal(all.searchParams.get("source_id"), "6ad59d1d78b93e5c029c71fe");
   assert.equal(all.searchParams.get("campaign_id"), null);
   assert.equal(all.searchParams.get("timezone"), "America/Mexico_City");
   assert.equal(all.searchParams.get("per"), "1000");
   assert.equal(all.searchParams.get("page"), "2");
   const fields = all.searchParams.get("fields")?.split(",") ?? [];
-  assert.deepEqual(fields, REPORT_FIELDS);
+  assert.deepEqual(fields, [...REPORT_FIELDS, "campaign_id"]);
   for (const blocked of ["roas", "profit", "cpa", "total_revenue"]) {
     assert.equal(fields.includes(blocked), false);
   }
@@ -369,6 +370,8 @@ test("a URL pede o relatório v2 e não os campos prontos de ROAS", () => {
     campaignId: "6adae4745021de703da2318f",
   });
   assert.equal(felipe.searchParams.get("campaign_id"), "6adae4745021de703da2318f");
+  assert.equal(felipe.searchParams.get("group"), "rt_ad_id,rt_ad,rt_adgroup,date");
+  assert.deepEqual(felipe.searchParams.get("fields")?.split(","), REPORT_FIELDS);
 });
 
 test("critérios inválidos voltam para o padrão", () => {
@@ -391,6 +394,71 @@ test("critérios inválidos voltam para o padrão", () => {
   assert.equal(migrated.superWinnerRoas, 3);
 });
 
+test("as linhas do gestor somam a linha de todos", () => {
+  const grouped = groupRows([
+    {
+      rt_ad_id: "1",
+      rt_ad: "LT-LF-CRESPO-001",
+      date: "2026-10-21",
+      cost: 100,
+      revenuetype2: 50,
+      convtype2: 2,
+      convtype4: 1,
+      buyer: "felipe",
+    },
+    {
+      rt_ad_id: "1",
+      rt_ad: "LT-LF-CRESPO-001",
+      date: "2026-10-22",
+      cost: 80.9,
+      revenuetype2: 20,
+      convtype2: 1,
+      convtype4: 1,
+      buyer: "felipe",
+    },
+    {
+      rt_ad_id: "2",
+      rt_ad: "lt-lf-crespo-001",
+      date: "2026-10-21",
+      cost: 200,
+      revenuetype2: 300,
+      convtype2: 4,
+      convtype4: 3,
+      buyer: "erick",
+    },
+    {
+      rt_ad_id: "3",
+      rt_ad: "LT-LF-CRESPO-001",
+      date: "2026-10-28",
+      cost: 232.72,
+      revenuetype2: 100,
+      convtype2: 2,
+      convtype4: 1,
+      buyer: "daniel",
+    },
+  ]);
+  const [parent] = buildCreativeRows(
+    grouped,
+    { from: "2026-10-21", to: "2026-10-28" },
+    "2026-11-02",
+    DEFAULT_THRESHOLDS,
+  );
+  assert.ok(parent);
+  const subs = parent.gestorRows ?? [];
+  assert.deepEqual(subs.map((row) => row.gestorLabel), ["Felipe", "Erick", "Daniel"]);
+  const sum = (pick: (row: (typeof subs)[number]) => number) => subs.reduce((total, row) => total + pick(row), 0);
+  assert.ok(Math.abs(sum((row) => row.spend) - parent.spend) < 1e-6);
+  assert.ok(Math.abs(sum((row) => row.depositRevenue) - parent.depositRevenue) < 1e-6);
+  assert.ok(Math.abs(sum((row) => row.deposits) - parent.deposits) < 1e-6);
+  assert.ok(Math.abs(sum((row) => row.ftds) - parent.ftds) < 1e-6);
+  assert.equal(parent.adRoas, parent.depositRevenue / parent.spend);
+  assert.equal(parent.cpaFtd, parent.spend / parent.ftds);
+  assert.equal(parent.launchDate, "2026-10-21");
+  assert.equal(subs.find((row) => row.gestorId === "felipe")?.launchDate, "2026-10-21");
+  assert.equal(subs.find((row) => row.gestorId === "daniel")?.launchDate, "2026-10-28");
+  assert.notEqual(subs.find((row) => row.gestorId === "daniel")?.launchDate, parent.launchDate);
+});
+
 test("número ausente ou infinito vira traço, e CTR é porcentagem", () => {
   for (const value of [null, Number.NaN, Number.POSITIVE_INFINITY]) {
     assert.equal(formatUsd(value), "—");
@@ -402,7 +470,7 @@ test("número ausente ou infinito vira traço, e CTR é porcentagem", () => {
   assert.equal(formatRoas(2.4), "2.40");
   assert.equal(formatPercent(0.025), "2.50%");
   assert.equal(formatCount(Number.NaN), "—");
-  assert.equal(formatLaunch("2026-10-24", 10), "24/10 · 10 dias");
-  assert.equal(formatLaunch("2026-11-02", 1), "02/11 · 1 dia");
+  assert.equal(formatLaunch("2026-10-24", 10), "24/10 · 10d");
+  assert.equal(formatLaunch("2026-11-02", 1), "02/11 · 1d");
   assert.equal(formatLaunch(null, null), "—");
 });

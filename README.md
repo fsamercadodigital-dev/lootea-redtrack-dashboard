@@ -54,7 +54,7 @@ O custo por anúncio é aproximado, porque o RedTrack ainda reparte o custo do c
 
 ## Coorte
 
-O log traz `external_id` e os tipos FTD, Deposit e Redeposit, mas a receita da coorte por anúncio não fechou (os depósitos não amarraram no primeiro FTD). Por isso o painel avisa `coorte indisponível – usando o rastreamento do anúncio`: ROAS é `revenuetype2 ÷ gasto` e o RPR fica 100% se houve redeposit, senão 0%. Top cliente e legado ficam vazios.
+O log traz `external_id` e os tipos FTD, Deposit e Redeposit, mas a receita da coorte por anúncio não fechou (os depósitos não amarraram no primeiro FTD). O ROAS da tela é `revenuetype2 ÷ gasto`. A frase sobre isso fica em Critérios. RPR, baleia e legacy ficam de fora enquanto não houver coorte.
 
 ## Decisão
 

@@ -69,9 +69,16 @@ test("a tabela mostra o crachá, o motivo, o nome e o id", () => {
   assert.match(html, /LT-RIFA-001/);
   assert.match(html, /222/);
   assert.match(html, /Lançamento/);
-  assert.match(html, /24\/10 · 10 dias/);
-  assert.match(html, /ROAS D1/);
-  assert.match(html, /ROAS D4/);
+  assert.match(html, /24\/10 · 10d/);
+  assert.match(html, /ROAS D1–D4/);
+  assert.doesNotMatch(html, />Motivo</);
+  const headerOrder = ["AOV Dep.", "ROAS", "FTD", "Redep.", "ROAS D1–D4", "Ação"];
+  let cursor = -1;
+  for (const label of headerOrder) {
+    const at = html.indexOf(label, cursor + 1);
+    assert.ok(at > cursor, label);
+    cursor = at;
+  }
   assert.match(html, />1\.42</);
   assert.match(html, /24\/10 · Spend \$12\.00 · Deposit Rev \$17\.04/);
   assert.match(html, /Spend/);

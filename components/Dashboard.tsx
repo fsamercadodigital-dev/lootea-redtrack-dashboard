@@ -262,9 +262,6 @@ export default function Dashboard() {
         <button type="button" className="text-button" aria-expanded={settingsOpen} onClick={() => setSettingsOpen(true)}>
           Critérios
         </button>
-        {report?.cohortMode === "proxy" ? (
-          <p className="quiet">coorte indisponível – usando o rastreamento do anúncio</p>
-        ) : null}
       </div>
 
       {settingsOpen ? (
@@ -290,7 +287,13 @@ export default function Dashboard() {
       ) : null}
 
       {report && visibleRows.length > 0 ? (
-        <CreativesTable rows={visibleRows} sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+        <CreativesTable
+          rows={visibleRows}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          onSort={onSort}
+          showGestores={buyer === "all"}
+        />
       ) : null}
 
     </main>

@@ -17,6 +17,8 @@ export type CreativeSeries = {
   rawNames: string[];
   adset: string;
   days: DailyPoint[];
+  /** Preenchido em Todos os gestores: dias daquele gestor, sem somar os outros. */
+  buyers?: { buyer: "felipe" | "erick" | "daniel" | "other"; adset: string; days: DailyPoint[] }[];
 };
 
 export type CohortMode = "full" | "proxy";

@@ -25,13 +25,12 @@ export function formatCount(value: number): string {
   });
 }
 
-/** Lançamento no dia 1. Ex.: 24/10 · 10 dias. */
+/** Lançamento no dia 1. Ex.: 24/10 · 10d. */
 export function formatLaunch(date: string | null, age: number | null): string {
   if (!date || age == null || age < 1) return "—";
   const [year, month, day] = date.split("-");
   if (!year || !month || !day) return "—";
-  const label = age === 1 ? "1 dia" : `${age} dias`;
-  return `${day}/${month} · ${label}`;
+  return `${day}/${month} · ${age}d`;
 }
 
 export function formatRatio(value: number | null): string {

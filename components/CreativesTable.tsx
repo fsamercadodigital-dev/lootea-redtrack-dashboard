@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment, useState } from "react";
 import type { Verdict } from "@/lib/decision";
 import { formatShortDate } from "@/lib/dates";
 import { formatCount, formatLaunch, formatPercent, formatRoas, formatUsd } from "@/lib/format";
@@ -22,10 +23,7 @@ export type SortKey =
   | "cpc"
   | "clicks"
   | "ctr"
-  | "d1"
-  | "d2"
-  | "d3"
-  | "d4"
+  | "earlyRoas"
   | "action";
 
 export type SortDir = "asc" | "desc";
@@ -35,6 +33,7 @@ type Props = {
   sortKey: SortKey;
   sortDir: SortDir;
   onSort: (key: SortKey) => void;
+  showGestores?: boolean;
 };
 
 const VERDICT_LABEL: Record<Verdict, string> = {
@@ -56,30 +55,28 @@ type Column = {
   label: string;
   title: string;
   align: "left" | "right";
+  width: string;
 };
 
 const COLUMNS: Column[] = [
-  { key: "name", label: "Criativo", title: "Nome normalizado", align: "left" },
-  { key: "day", label: "Lançamento", title: "Data do primeiro gasto e idade. O lançamento é o dia 1", align: "left" },
-  { key: "spend", label: "Spend", title: "Custo", align: "right" },
-  { key: "deposits", label: "Depósitos", title: "Depósitos no período", align: "right" },
-  { key: "depositRevenue", label: "Deposit Rev", title: "Receita dos depósitos", align: "right" },
-  { key: "cpaDeposit", label: "CPA Deposit", title: "Custo ÷ depósitos", align: "right" },
-  { key: "aovDeposit", label: "AOV Deposit", title: "Receita de depósitos ÷ depósitos", align: "right" },
-  { key: "roas", label: "ROAS", title: "Receita de depósitos ÷ custo", align: "right" },
-  { key: "ftds", label: "FTD", title: "Primeiros depósitos", align: "right" },
-  { key: "redeposits", label: "Redeposit", title: "Depósitos depois do primeiro", align: "right" },
-  { key: "cpaFtd", label: "CPA FTD", title: "Custo ÷ FTDs", align: "right" },
-  { key: "ftdRevenue", label: "Revenue FTD", title: "Receita dos primeiros depósitos", align: "right" },
-  { key: "cpm", label: "CPM", title: "Custo por mil impressões. Vazio sem impressões", align: "right" },
-  { key: "cpc", label: "CPC", title: "Custo ÷ cliques", align: "right" },
-  { key: "clicks", label: "Cliques no link", title: "Cliques no link", align: "right" },
-  { key: "ctr", label: "CTR", title: "Cliques ÷ impressões. Vazio sem impressões", align: "right" },
-  { key: "d1", label: "ROAS D1", title: "ROAS do dia de lançamento", align: "right" },
-  { key: "d2", label: "ROAS D2", title: "ROAS do dia seguinte ao lançamento", align: "right" },
-  { key: "d3", label: "ROAS D3", title: "ROAS do terceiro dia", align: "right" },
-  { key: "d4", label: "ROAS D4", title: "ROAS do quarto dia", align: "right" },
-  { key: "action", label: "Ação", title: "Decisão", align: "left" },
+  { key: "name", label: "Criativo", title: "Nome normalizado", align: "left", width: "16%" },
+  { key: "day", label: "Lançamento", title: "Data do primeiro gasto e idade. O lançamento é o dia 1", align: "left", width: "7%" },
+  { key: "spend", label: "Spend", title: "Spend", align: "right", width: "6%" },
+  { key: "deposits", label: "Dep.", title: "Depósitos", align: "right", width: "4%" },
+  { key: "depositRevenue", label: "Dep. Rev", title: "Deposit Rev", align: "right", width: "6.2%" },
+  { key: "cpaDeposit", label: "CPA Dep.", title: "CPA Deposit", align: "right", width: "5.6%" },
+  { key: "aovDeposit", label: "AOV Dep.", title: "AOV Deposit", align: "right", width: "5.4%" },
+  { key: "roas", label: "ROAS", title: "ROAS", align: "right", width: "4.2%" },
+  { key: "ftds", label: "FTD", title: "FTD", align: "right", width: "3.6%" },
+  { key: "redeposits", label: "Redep.", title: "Redeposit", align: "right", width: "4.2%" },
+  { key: "cpaFtd", label: "CPA FTD", title: "CPA FTD", align: "right", width: "5.4%" },
+  { key: "ftdRevenue", label: "Rev. FTD", title: "Revenue FTD", align: "right", width: "5.6%" },
+  { key: "cpm", label: "CPM", title: "CPM", align: "right", width: "4.2%" },
+  { key: "cpc", label: "CPC", title: "CPC", align: "right", width: "4.2%" },
+  { key: "clicks", label: "Cliques", title: "Cliques no link", align: "right", width: "4.6%" },
+  { key: "ctr", label: "CTR", title: "CTR", align: "right", width: "4%" },
+  { key: "earlyRoas", label: "ROAS D1–D4", title: "ROAS do dia de lançamento e dos três dias seguintes", align: "right", width: "13%" },
+  { key: "action", label: "Ação", title: "Decisão. O motivo aparece ao passar o mouse.", align: "left", width: "6.8%" },
 ];
 
 function rank(value: number | null): number | null {
@@ -121,14 +118,8 @@ function readNumber(row: CreativeRow, key: SortKey): number | null {
       return row.clicks;
     case "ctr":
       return row.ctr;
-    case "d1":
+    case "earlyRoas":
       return row.earlyDays[0]?.roas ?? null;
-    case "d2":
-      return row.earlyDays[1]?.roas ?? null;
-    case "d3":
-      return row.earlyDays[2]?.roas ?? null;
-    case "d4":
-      return row.earlyDays[3]?.roas ?? null;
     default:
       return null;
   }
@@ -152,17 +143,15 @@ export function sortCreatives(rows: CreativeRow[], key: SortKey, dir: SortDir): 
   });
 }
 
-function earlyIndex(key: SortKey): number | null {
-  if (key === "d1") return 0;
-  if (key === "d2") return 1;
-  if (key === "d3") return 2;
-  if (key === "d4") return 3;
-  return null;
+function earlyText(day: EarlyDay | null): string {
+  if (!day || day.roas == null) return "—";
+  return formatRoas(day.roas);
 }
 
-function earlyTitle(day: EarlyDay | null): string | undefined {
-  if (!day) return undefined;
-  return `${formatShortDate(day.date)} · Spend ${formatUsd(day.spend)} · Deposit Rev ${formatUsd(day.depositRevenue)}`;
+function earlyTip(day: EarlyDay | null, index: number): string {
+  if (!day) return `D${index + 1}: dia ainda não chegou`;
+  const roas = day.roas == null ? "—" : formatRoas(day.roas);
+  return `${formatShortDate(day.date)} · Spend ${formatUsd(day.spend)} · Deposit Rev ${formatUsd(day.depositRevenue)} · ROAS ${roas}`;
 }
 
 function textFor(row: CreativeRow, key: SortKey): string {
@@ -181,11 +170,6 @@ function textFor(row: CreativeRow, key: SortKey): string {
       return formatRoas(row.adRoas);
     case "ctr":
       return formatPercent(row.ctr);
-    case "d1":
-    case "d2":
-    case "d3":
-    case "d4":
-      return formatRoas(readNumber(row, key));
     case "deposits":
     case "ftds":
     case "redeposits":
@@ -196,13 +180,75 @@ function textFor(row: CreativeRow, key: SortKey): string {
   }
 }
 
-export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props) {
+function motivoTitle(row: CreativeRow): string {
+  return [row.decision.motivo, ...row.decision.alerts].filter(Boolean).join(" · ");
+}
+
+function EarlyRoas({ days }: { days: CreativeRow["earlyDays"] }) {
+  return (
+    <span className="early-roas">
+      {days.map((day, index) => (
+        <span key={index} title={earlyTip(day, index)}>
+          {index > 0 ? " · " : ""}
+          {earlyText(day)}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function MetricCells({ row }: { row: CreativeRow }) {
+  return (
+    <>
+      {COLUMNS.slice(2).map((column) => {
+        if (column.key === "action") {
+          return (
+            <td key={column.key} className="left">
+              <span className={`pill ${row.decision.verdict}`} title={motivoTitle(row)}>
+                {VERDICT_LABEL[row.decision.verdict]}
+              </span>
+            </td>
+          );
+        }
+        if (column.key === "earlyRoas") {
+          return (
+            <td key={column.key} className="num">
+              <EarlyRoas days={row.earlyDays} />
+            </td>
+          );
+        }
+        return (
+          <td key={column.key} className="num">
+            {textFor(row, column.key)}
+          </td>
+        );
+      })}
+    </>
+  );
+}
+
+export default function CreativesTable({ rows, sortKey, sortDir, onSort, showGestores = false }: Props) {
   const sorted = sortCreatives(rows, sortKey, sortDir);
+  const [open, setOpen] = useState<Set<string>>(new Set());
+
+  function toggle(name: string) {
+    setOpen((current) => {
+      const next = new Set(current);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
 
   return (
     <div className="table-wrap">
       <table>
         <caption className="sr-only">Criativos no período, com a ação recomendada</caption>
+        <colgroup>
+          {COLUMNS.map((column) => (
+            <col key={column.key} style={{ width: column.width }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
             {COLUMNS.map((column) => {
@@ -220,48 +266,66 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
                 </th>
               );
             })}
-            <th className="left">Motivo</th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map((row) => (
-            <tr key={row.adId} data-verdict={row.decision.verdict}>
-              <td className="left">
-                <div className="creative">
-                  <span
-                    className="creative-name"
-                    title={[row.name, row.adId, ...row.rawNames.filter((name) => name !== row.name)].join("\n")}
-                  >
-                    {row.name}
-                  </span>
-                </div>
-              </td>
-              <td className="left">{formatLaunch(row.launchDate, row.day)}</td>
-              {COLUMNS.slice(2).map((column) => {
-                if (column.key === "action") {
-                  return (
-                    <td key={column.key} className="left">
-                      <span className={`pill ${row.decision.verdict}`}>{VERDICT_LABEL[row.decision.verdict]}</span>
-                    </td>
-                  );
-                }
-                const early = earlyIndex(column.key);
-                return (
-                  <td key={column.key} className="num" title={early == null ? undefined : earlyTitle(row.earlyDays[early])}>
-                    {textFor(row, column.key)}
+          {sorted.map((row) => {
+            const gestores = showGestores ? (row.gestorRows ?? []) : [];
+            const canExpand = gestores.length > 1;
+            const expanded = canExpand && open.has(row.name);
+            return (
+              <Fragment key={row.name}>
+                <tr data-verdict={row.decision.verdict}>
+                  <td className="left">
+                    <div className="creative">
+                      {canExpand ? (
+                        <button
+                          type="button"
+                          className={expanded ? "chevron open" : "chevron"}
+                          aria-expanded={expanded}
+                          aria-label={`Gestores de ${row.name}`}
+                          onClick={() => toggle(row.name)}
+                        >
+                          <svg viewBox="0 0 12 12" aria-hidden="true">
+                            <path d="M4 2.5 8 6 4 9.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <span className="chevron-space" />
+                      )}
+                      <div className="creative-copy">
+                        <span
+                          className="creative-name"
+                          title={[row.name, row.adId, ...row.rawNames.filter((name) => name !== row.name)].join("\n")}
+                        >
+                          {row.name}
+                        </span>
+                        {gestores.length > 0 ? (
+                          <span className="gestores">{gestores.map((item) => item.gestorLabel).join(" · ")}</span>
+                        ) : null}
+                      </div>
+                    </div>
                   </td>
-                );
-              })}
-              <td className="left">
-                <span
-                  className="motivo"
-                  title={[row.decision.motivo, ...row.decision.alerts].join(" · ")}
-                >
-                  {[row.decision.motivo, ...row.decision.alerts].join(" · ")}
-                </span>
-              </td>
-            </tr>
-          ))}
+                  <td className="left">{formatLaunch(row.launchDate, row.day)}</td>
+                  <MetricCells row={row} />
+                </tr>
+                {expanded
+                  ? gestores.map((child) => (
+                      <tr key={`${row.name}:${child.gestorId}`} className="sub" data-verdict={child.decision.verdict}>
+                        <td className="left">
+                          <div className="creative sub">
+                            <span className="chevron-space" />
+                            <span className="creative-name">{child.gestorLabel}</span>
+                          </div>
+                        </td>
+                        <td className="left">{formatLaunch(child.launchDate, child.day)}</td>
+                        <MetricCells row={child} />
+                      </tr>
+                    ))
+                  : null}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>

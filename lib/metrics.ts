@@ -1,3 +1,4 @@
+import { buyerForCampaign, GESTOR_LABEL, GESTOR_ORDER, type GestorId } from "./campaigns";
 import type { AdCohortStats } from "./cohort";
 import type { Thresholds } from "./config";
 import { addDays, daysBetween, periodRange, type PeriodId } from "./dates";
@@ -20,6 +21,9 @@ export type RawRow = {
   convtype4?: unknown;
   revenuetype4?: unknown;
   convtype7?: unknown;
+  campaign_id?: unknown;
+  rt_campaign_id?: unknown;
+  buyer?: GestorId;
 };
 
 export type EarlyDay = {
@@ -64,6 +68,10 @@ export type CreativeRow = {
   /** ROAS dos quatro primeiros dias de vida. Null se esse dia ainda não chegou. */
   earlyDays: [EarlyDay | null, EarlyDay | null, EarlyDay | null, EarlyDay | null];
   decision: Decision;
+  gestorId?: GestorId;
+  gestorLabel?: string;
+  /** Só na visão Todos os gestores. Cada linha é aquele gestor, com o D1 dele. */
+  gestorRows?: CreativeRow[];
 };
 
 export type Summary = {
@@ -149,6 +157,15 @@ function addToDay(day: DailyPoint, row: RawRow) {
  * Soma pelo nome normalizado do criativo. O mesmo nome em outro anúncio ou com outra
  * capitalização entra na mesma linha. O id mostrado é o do dia mais recente.
  */
+function gestorOf(row: RawRow): GestorId | null {
+  if (row.buyer === "felipe" || row.buyer === "erick" || row.buyer === "daniel" || row.buyer === "other") {
+    return row.buyer;
+  }
+  const campaignId = text(row.campaign_id) || text(row.rt_campaign_id);
+  if (!campaignId) return null;
+  return buyerForCampaign(campaignId);
+}
+
 export function groupRows(rows: RawRow[]): CreativeSeries[] {
   const byName = new Map<
     string,
@@ -159,6 +176,7 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
       adset: string;
       adsetDate: string;
       days: Map<string, DailyPoint>;
+      buyers: Map<GestorId, { adset: string; adsetDate: string; days: Map<string, DailyPoint> }>;
     }
   >();
 
@@ -172,7 +190,15 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
 
     let creative = byName.get(key);
     if (!creative) {
-      creative = { adId: "", adIdDate: "", rawNames: new Set(), adset: "", adsetDate: "", days: new Map() };
+      creative = {
+        adId: "",
+        adIdDate: "",
+        rawNames: new Set(),
+        adset: "",
+        adsetDate: "",
+        days: new Map(),
+        buyers: new Map(),
+      };
       byName.set(key, creative);
     }
 
@@ -190,6 +216,22 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
     const day = creative.days.get(date) ?? emptyDay(date);
     addToDay(day, row);
     creative.days.set(date, day);
+
+    const gestor = gestorOf(row);
+    if (gestor) {
+      let bucket = creative.buyers.get(gestor);
+      if (!bucket) {
+        bucket = { adset: "", adsetDate: "", days: new Map() };
+        creative.buyers.set(gestor, bucket);
+      }
+      if (adset && (!bucket.adsetDate || date > bucket.adsetDate)) {
+        bucket.adset = adset;
+        bucket.adsetDate = date;
+      }
+      const buyerDay = bucket.days.get(date) ?? emptyDay(date);
+      addToDay(buyerDay, row);
+      bucket.days.set(date, buyerDay);
+    }
   }
 
   return Array.from(byName, ([name, creative]) => ({
@@ -198,6 +240,15 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
     rawNames: Array.from(creative.rawNames).sort((a, b) => a.localeCompare(b)),
     adset: creative.adset,
     days: Array.from(creative.days.values()).sort((a, b) => a.date.localeCompare(b.date)),
+    buyers: GESTOR_ORDER.flatMap((buyer) => {
+      const bucket = creative.buyers.get(buyer);
+      if (!bucket) return [];
+      return [{
+        buyer,
+        adset: bucket.adset,
+        days: Array.from(bucket.days.values()).sort((a, b) => a.date.localeCompare(b.date)),
+      }];
+    }),
   }));
 }
 
@@ -303,7 +354,7 @@ export function buildCreativeRows(
   const avgCohortRoas = roas(trackedRevenue, trackedSpend);
   const scaleBar = avgCohortRoas == null ? null : avgCohortRoas * thresholds.scaleBarMultiple;
 
-  return drafts.map((row) => ({
+  const rows = drafts.map((row) => ({
     ...row,
     decision: decide(
       {
@@ -327,6 +378,32 @@ export function buildCreativeRows(
       cohorts ? "full" : "proxy",
     ),
   }));
+
+  if (!creatives.some((creative) => creative.buyers && creative.buyers.length > 0)) return rows;
+
+  const nested = new Map<string, CreativeRow[]>();
+  for (const gestor of GESTOR_ORDER) {
+    const subset: CreativeSeries[] = [];
+    for (const creative of creatives) {
+      const slice = creative.buyers?.find((item) => item.buyer === gestor);
+      if (!slice || slice.days.length === 0) continue;
+      subset.push({
+        adId: creative.adId,
+        name: creative.name,
+        rawNames: creative.rawNames,
+        adset: slice.adset || creative.adset,
+        days: slice.days,
+      });
+    }
+    if (subset.length === 0) continue;
+    for (const row of buildCreativeRows(subset, period, today, thresholds, cohorts)) {
+      const list = nested.get(row.name) ?? [];
+      list.push({ ...row, gestorId: gestor, gestorLabel: GESTOR_LABEL[gestor] });
+      nested.set(row.name, list);
+    }
+  }
+
+  return rows.map((row) => ({ ...row, gestorRows: nested.get(row.name) ?? [] }));
 }
 
 export function rowsForPeriod(
