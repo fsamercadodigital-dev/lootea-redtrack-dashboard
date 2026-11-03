@@ -5,7 +5,7 @@ import { fetchReport, ClientReportError } from "@/lib/client-report";
 import { BUYERS, DEFAULT_THRESHOLDS, type BuyerId, type Thresholds } from "@/lib/config";
 import { addDays, formatClock, mexicoToday, PERIODS, type PeriodId } from "@/lib/dates";
 import type { Verdict } from "@/lib/decision";
-import { buildCreativeRows, summarize } from "@/lib/metrics";
+import { buildCreativeRows, criteriaLive, summarize } from "@/lib/metrics";
 import { readStoredThresholds, storeThresholds } from "@/lib/settings";
 import type { ReportFailure, ReportPayload } from "@/lib/types";
 import CreativesTable, { type SortDir, type SortKey } from "./CreativesTable";
@@ -98,6 +98,10 @@ export default function Dashboard() {
   }, [report, thresholds]);
 
   const summary = useMemo(() => summarize(rows), [rows]);
+  const live = useMemo(
+    () => criteriaLive(rows, thresholds, report?.cohortMode ?? "proxy"),
+    [rows, thresholds, report?.cohortMode],
+  );
 
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -270,7 +274,7 @@ export default function Dashboard() {
             <button type="button" className="text-button close" onClick={() => setSettingsOpen(false)}>
               Fechar
             </button>
-            <SettingsPanel thresholds={thresholds} onChange={setThresholds} />
+            <SettingsPanel thresholds={thresholds} live={live} onChange={setThresholds} />
           </aside>
         </div>
       ) : null}

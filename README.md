@@ -60,10 +60,12 @@ O log traz `external_id` e os tipos FTD, Deposit e Redeposit, mas a receita da c
 
 Só entra na conta o conjunto cujo nome começa com `[E]`, `[F]` ou `[D]` e uma data. O resto fica **Sem veredito**. Os padrões estão em `lib/config.ts` e podem ser mudados em Critérios.
 
-1. Dia 1: descartar com gasto ≥ $10 sem cadastro, ou ≥ $15 sem depósito. Super Winner (ROAS de depósito > 2, FTD ≥ 15 e CPA ≤ $7,50) escala na hora.
-2. Dias 2 e 3: manter. Não descartar por um dia ruim.
-3. Até a véspera do dia 8: manter. Descartar só se o CPA for ≥ 2× a média dos anúncios com gasto e não houver Redeposit.
-4. Do dia 8 em diante: escalar em CBO se o ROAS da coorte for ≥ média × 1,2, com FTD ≥ 15, RPR ≥ 25% e top cliente ≤ 50%. Descartar se o ROAS da coorte for < 0,8. Senão, manter em ABO.
+1. D1: descartar com gasto ≥ $10 sem registro, ou ≥ $15 sem depósito. Super Winner (ROAS de depósito ≥ 2, FTD ≥ 15 e CPA ≤ $7,50) escala no mesmo dia.
+2. D2 e D3: manter. Não descartar por um dia ruim.
+3. D4 a D7: pode subir budget no ABO se o ROAS ≥ 1,2 e FTD ≥ 8. Descartar se o CPA FTD for ≥ 2× a média e não houver redepósito.
+4. D8 em diante: escalar se o ROAS for ≥ média geral × 1,2 e FTD ≥ 15. Descartar se o ROAS for < 0,8. Senão, manter com budget baixo.
+
+Enquanto a coorte não fecha, o ROAS é receita de depósito ÷ gasto. RPR, baleia, legacy e o alerta de amostra não entram nessa conta.
 
 Alertas (não mudam a ação): baleia acima de 50% da receita, menos de 15 FTDs, legado acima de 40%. A média usa os criativos com gasto, salvo quando Critérios exige a marcação do conjunto.
 

@@ -1,10 +1,10 @@
 import type { AdCohortStats } from "./cohort";
 import type { Thresholds } from "./config";
 import { addDays, daysBetween, periodRange, type PeriodId } from "./dates";
-import { decide, type Decision } from "./decision";
+import { decide, type Decision, type RuleId } from "./decision";
 import { normalizeAdName } from "./normalize";
 import { hasFullTracking } from "./tracking";
-import type { CreativeSeries, DailyPoint } from "./types";
+import type { CohortMode, CreativeSeries, DailyPoint } from "./types";
 
 export type RawRow = {
   rt_ad_id?: unknown;
@@ -324,6 +324,7 @@ export function buildCreativeRows(
         scaleBar,
       },
       thresholds,
+      cohorts ? "full" : "proxy",
     ),
   }));
 }
@@ -335,6 +336,43 @@ export function rowsForPeriod(
   thresholds: Thresholds,
 ): CreativeRow[] {
   return buildCreativeRows(creatives, periodRange(today, period), today, thresholds);
+}
+
+export type CriteriaLive = {
+  cohortMode: CohortMode;
+  avgRoas: number | null;
+  scaleBar: number | null;
+  avgCpa: number | null;
+  cpaLimit: number | null;
+  counts: { escalar: number; manter: number; descartar: number };
+  rules: Partial<Record<RuleId, number>>;
+};
+
+/** Mesma média que a decisão usa, para o drawer não mostrar um número diferente do veredito. */
+export function criteriaLive(rows: CreativeRow[], thresholds: Thresholds, cohortMode: CohortMode): CriteriaLive {
+  const tracked = rows.filter((row) => row.tracked);
+  const spend = tracked.reduce((total, row) => total + row.spend, 0);
+  const ftds = tracked.reduce((total, row) => total + row.ftds, 0);
+  const revenue = tracked.reduce((total, row) => total + row.cohortRevenue, 0);
+  const avgCpa = perUnit(spend, ftds);
+  const avgRoas = roas(revenue, spend);
+  const rules: Partial<Record<RuleId, number>> = {};
+  for (const row of rows) {
+    rules[row.decision.rule] = (rules[row.decision.rule] ?? 0) + 1;
+  }
+  return {
+    cohortMode,
+    avgRoas,
+    scaleBar: avgRoas == null ? null : avgRoas * thresholds.scaleBarMultiple,
+    avgCpa,
+    cpaLimit: avgCpa == null ? null : avgCpa * thresholds.cpaMultiple,
+    counts: {
+      escalar: rows.filter((row) => row.decision.verdict === "escalar").length,
+      manter: rows.filter((row) => row.decision.verdict === "manter").length,
+      descartar: rows.filter((row) => row.decision.verdict === "descartar").length,
+    },
+    rules,
+  };
 }
 
 export function summarize(rows: CreativeRow[]): Summary {

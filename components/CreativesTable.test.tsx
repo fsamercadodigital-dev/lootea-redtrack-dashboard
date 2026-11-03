@@ -38,7 +38,7 @@ function row(partial: Pick<CreativeRow, "adId" | "name" | "spend"> & Partial<Cre
       null,
       null,
     ],
-    decision: { verdict: "manter", motivo: "não mexer, não subir budget", alerts: [] },
+    decision: { verdict: "manter", motivo: "não mexer, não subir budget", alerts: [], rule: "d2-manter" },
     ...partial,
   };
 }
@@ -48,13 +48,13 @@ const rows = [
     adId: "111",
     name: "Criativo caro",
     spend: 40,
-    decision: { verdict: "descartar", motivo: "ROAS cohort abaixo de 0.8", alerts: [] },
+    decision: { verdict: "descartar", motivo: "ROAS cohort abaixo de 0.8", alerts: [], rule: "d8-descartar" },
   }),
   row({
     adId: "222",
     name: "LT-RIFA-001",
     spend: 12,
-    decision: { verdict: "escalar", motivo: "Super Winner – Surf Scaling hoje", alerts: ["amostra pequena, não escalar"] },
+    decision: { verdict: "escalar", motivo: "Super Winner – Surf Scaling hoje", alerts: ["amostra pequena, não escalar"], rule: "d1-winner" },
   }),
 ];
 
