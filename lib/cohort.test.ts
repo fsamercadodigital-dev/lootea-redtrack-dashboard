@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildCohorts, kindOf, toConvEvent, type ConvEvent } from "./cohort";
+import { buildCohorts, kindsOf, toConvEvents, type ConvEvent } from "./cohort";
 import { hasFullTracking } from "./tracking";
 
 test("o nome do conjunto precisa do prefixo e de uma data", () => {
@@ -13,11 +13,11 @@ test("o nome do conjunto precisa do prefixo e de uma data", () => {
 });
 
 test("classifica FTD, depósito e redeposit pelo type", () => {
-  assert.equal(kindOf({ type: "type4" }), "ftd");
-  assert.equal(kindOf({ type: "Deposit" }), "deposit");
-  assert.equal(kindOf({ type: "type7" }), "redeposit");
-  assert.equal(kindOf({ type4: 1 }), "ftd");
-  assert.equal(kindOf({ type: "PageView" }), "other");
+  assert.deepEqual(kindsOf({ type: "type4" }), ["ftd"]);
+  assert.deepEqual(kindsOf({ type: "Deposit" }), ["deposit"]);
+  assert.deepEqual(kindsOf({ type: "type7" }), ["redeposit"]);
+  assert.deepEqual(kindsOf({ type: "type2", type4: 1 }), ["ftd", "deposit"]);
+  assert.deepEqual(kindsOf({ type: "PageView" }), []);
 });
 
 test("a coorte soma depósitos de qualquer anúncio e marca legacy e baleia", () => {
@@ -58,7 +58,7 @@ test("redeposit por type7 conta no RPR mesmo com um depósito só", () => {
 });
 
 test("lê external_id, payout 0 e data do log", () => {
-  const event = toConvEvent(
+  const events = toConvEvents(
     {
       external_id: "user-1",
       type: "type2",
@@ -68,11 +68,13 @@ test("lê external_id, payout 0 e data do log", () => {
     },
     (raw) => raw.slice(0, 10),
   );
-  assert.deepEqual(event, {
-    userId: "user-1",
-    kind: "deposit",
-    payout: 0,
-    date: "2026-10-22",
-    adId: "120246834964730138",
-  });
+  assert.deepEqual(events, [
+    {
+      userId: "user-1",
+      kind: "deposit",
+      payout: 0,
+      date: "2026-10-22",
+      adId: "120246834964730138",
+    },
+  ]);
 });

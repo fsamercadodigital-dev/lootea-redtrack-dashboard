@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cohortIsUsable, toConvEvent, type ConvEvent } from "./cohort";
+import { cohortIsUsable, toConvEvents, type ConvEvent } from "./cohort";
 import { CONVERSION_PAGE_CAP, CONVERSION_PAGE_SIZE, TIME_ZONE } from "./config";
 import { mexicoToday } from "./dates";
 import { readItemList } from "./report-body";
@@ -60,8 +60,7 @@ export async function loadConversionEvents(apiKey: string, from: string, to: str
     for (let page = 1; page <= CONVERSION_PAGE_CAP; page += 1) {
       const items = await fetchPage(apiKey, from, to, page);
       for (const item of items) {
-        const event = toConvEvent(item, eventDate);
-        if (event) events.push(event);
+        events.push(...toConvEvents(item, eventDate));
       }
       if (items.length < CONVERSION_PAGE_SIZE) {
         return cohortIsUsable(events) ? events : null;

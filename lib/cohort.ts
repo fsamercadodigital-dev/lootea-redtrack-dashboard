@@ -30,33 +30,42 @@ function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-/** Uma linha do log vira um evento. Sem tipo reconhecido, devolve null. */
-export function toConvEvent(row: unknown, dateOf: (raw: string) => string | null): ConvEvent | null {
-  if (!row || typeof row !== "object") return null;
+/** Uma linha do log pode virar mais de um evento. Sem tipo reconhecido, devolve vazio. */
+export function toConvEvents(row: unknown, dateOf: (raw: string) => string | null): ConvEvent[] {
+  if (!row || typeof row !== "object") return [];
   const record = row as Record<string, unknown>;
-  const kind = kindOf(record);
-  if (kind === "other") return null;
+  const kinds = kindsOf(record);
+  if (kinds.length === 0) return [];
   const date = dateOf(text(record.created_at) || text(record.conv_time) || text(record.track_time));
-  if (!date) return null;
+  if (!date) return [];
   const adId = text(record.rt_ad_id) || text(record.sub1);
-  return {
-    userId: text(record.external_id),
-    kind,
-    payout: num(record.payout),
-    date,
-    adId,
-  };
+  const payout = num(record.payout);
+  const userId = text(record.external_id);
+  return kinds.map((kind) => ({ userId, kind, payout, date, adId }));
 }
 
-export function kindOf(record: Record<string, unknown>): ConvKind {
-  const type = text(record.type).toLowerCase().replace(/\s+/g, "");
-  if (type === "type4" || type === "ftd") return "ftd";
-  if (type === "type2" || type === "deposit") return "deposit";
-  if (type === "type7" || type === "redeposit") return "redeposit";
-  if (record.type4 === 1) return "ftd";
-  if (record.type7 === 1) return "redeposit";
-  if (record.type2 === 1) return "deposit";
-  return "other";
+function flag(value: unknown): boolean {
+  if (value === true) return true;
+  if (typeof value === "number") return value > 0;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0;
+  }
+  return false;
+}
+
+/** Um postback pode ser depósito e FTD ao mesmo tempo. */
+export function kindsOf(record: Record<string, unknown>): ConvKind[] {
+  const type = text(record.type).toLowerCase().replace(/[\s_-]+/g, "");
+  const kinds: ConvKind[] = [];
+  const ftd =
+    type === "type4" || type === "ftd" || type.includes("ftd") || type.includes("firstdeposit") || flag(record.type4);
+  const deposit = type === "type2" || type === "deposit" || flag(record.type2);
+  const redeposit = type === "type7" || type === "redeposit" || flag(record.type7);
+  if (ftd) kinds.push("ftd");
+  if (deposit) kinds.push("deposit");
+  if (redeposit) kinds.push("redeposit");
+  return kinds;
 }
 
 export function cohortIsUsable(events: ConvEvent[]): boolean {
@@ -108,9 +117,7 @@ export function buildCohorts(
   const result = new Map<string, AdCohortStats>();
 
   for (const ad of ads) {
-    const users = Array.from(firstFtd.entries()).filter(
-      ([, first]) => first.adId === ad.adId && inPeriod(first.date, period),
-    );
+    const users = Array.from(firstFtd.entries()).filter(([, first]) => first.adId === ad.adId);
     let revenue = 0;
     let top = 0;
     let withRedeposit = 0;
