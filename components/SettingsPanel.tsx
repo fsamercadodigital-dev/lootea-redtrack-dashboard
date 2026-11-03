@@ -49,8 +49,8 @@ export default function SettingsPanel({ thresholds, onChange }: Props) {
           </button>
         </div>
         <ol className="rules">
-          <li>Dia 0: descartar com gasto alto sem cadastro ou sem depósito. Super Winner escala no mesmo dia.</li>
-          <li>Dias 1 e 2: manter, sem mexer no orçamento.</li>
+          <li>Dia 1, o lançamento: descartar com gasto alto sem cadastro ou sem depósito. Super Winner escala no mesmo dia.</li>
+          <li>Dias 2 e 3: manter, sem mexer no orçamento.</li>
           <li>Até a véspera da decisão final: manter, e descartar só se o CPA passar de 2× a média sem redeposit.</li>
           <li>Da decisão final em diante: escalar em CBO se a coorte bater a barra, ou descartar se ficar abaixo de 0,8.</li>
         </ol>
@@ -63,8 +63,8 @@ export default function SettingsPanel({ thresholds, onChange }: Props) {
           Exigir conjunto [E]/[F]/[D] + data
         </label>
         <div className="fields">
-          <Field label="Dia 0: gasto sem cadastro (US$)" value={thresholds.dia0SpendNoReg} step="1" onChange={(value) => update({ dia0SpendNoReg: value })} />
-          <Field label="Dia 0: gasto sem depósito (US$)" value={thresholds.dia0SpendNoDeposit} step="1" onChange={(value) => update({ dia0SpendNoDeposit: value })} />
+          <Field label="Dia 1: gasto sem cadastro (US$)" value={thresholds.dia0SpendNoReg} step="1" onChange={(value) => update({ dia0SpendNoReg: value })} />
+          <Field label="Dia 1: gasto sem depósito (US$)" value={thresholds.dia0SpendNoDeposit} step="1" onChange={(value) => update({ dia0SpendNoDeposit: value })} />
           <Field label="Super Winner: ROAS mínimo" value={thresholds.superWinnerRoas} step="0.1" onChange={(value) => update({ superWinnerRoas: value })} />
           <Field label="Super Winner: FTDs mínimos" value={thresholds.superWinnerFtd} step="1" onChange={(value) => update({ superWinnerFtd: Math.floor(value) })} />
           <Field label="Super Winner: CPA máximo (US$)" value={thresholds.superWinnerCpa} step="0.1" onChange={(value) => update({ superWinnerCpa: value })} />

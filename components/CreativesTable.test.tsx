@@ -9,7 +9,8 @@ function row(partial: Pick<CreativeRow, "adId" | "name" | "spend"> & Partial<Cre
     adset: "[E] 01/11",
     rawNames: [partial.name],
     tracked: true,
-    day: 2,
+    day: 10,
+    launchDate: "2026-10-24",
     signups: 3,
     deposits: 1,
     ftds: 1,
@@ -31,7 +32,12 @@ function row(partial: Pick<CreativeRow, "adId" | "name" | "spend"> & Partial<Cre
     cpc: 1.2,
     cpm: null,
     ctr: null,
-    earlySpend: [12, null, null, null],
+    earlyDays: [
+      { date: "2026-10-24", spend: 12, depositRevenue: 17.04, roas: 1.42 },
+      { date: "2026-10-25", spend: 0, depositRevenue: 0, roas: null },
+      null,
+      null,
+    ],
     decision: { verdict: "manter", motivo: "não mexer, não subir budget", alerts: [] },
     ...partial,
   };
@@ -62,7 +68,12 @@ test("a tabela mostra o crachá, o motivo, o nome e o id", () => {
   assert.match(html, /amostra pequena, não escalar/);
   assert.match(html, /LT-RIFA-001/);
   assert.match(html, /222/);
-  assert.match(html, />D1</);
+  assert.match(html, /Lançamento/);
+  assert.match(html, /24\/10 · 10 dias/);
+  assert.match(html, /ROAS D1/);
+  assert.match(html, /ROAS D4/);
+  assert.match(html, />1\.42</);
+  assert.match(html, /24\/10 · Spend \$12\.00 · Deposit Rev \$17\.04/);
   assert.match(html, /Spend/);
   assert.match(html, /Depósitos/);
   assert.doesNotMatch(html, /Redep\/FTD/);

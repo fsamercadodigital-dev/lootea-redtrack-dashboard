@@ -1,8 +1,9 @@
 "use client";
 
 import type { Verdict } from "@/lib/decision";
-import { formatCount, formatDay, formatPercent, formatRoas, formatUsd } from "@/lib/format";
-import type { CreativeRow } from "@/lib/metrics";
+import { formatShortDate } from "@/lib/dates";
+import { formatCount, formatLaunch, formatPercent, formatRoas, formatUsd } from "@/lib/format";
+import type { CreativeRow, EarlyDay } from "@/lib/metrics";
 
 export type SortKey =
   | "name"
@@ -59,7 +60,7 @@ type Column = {
 
 const COLUMNS: Column[] = [
   { key: "name", label: "Criativo", title: "Nome normalizado", align: "left" },
-  { key: "day", label: "Dia", title: "Dia 0 é o primeiro dia com gasto", align: "right" },
+  { key: "day", label: "Lançamento", title: "Data do primeiro gasto e idade. O lançamento é o dia 1", align: "left" },
   { key: "spend", label: "Spend", title: "Custo", align: "right" },
   { key: "deposits", label: "Depósitos", title: "Depósitos no período", align: "right" },
   { key: "depositRevenue", label: "Deposit Rev", title: "Receita dos depósitos", align: "right" },
@@ -74,10 +75,10 @@ const COLUMNS: Column[] = [
   { key: "cpc", label: "CPC", title: "Custo ÷ cliques", align: "right" },
   { key: "clicks", label: "Cliques no link", title: "Cliques no link", align: "right" },
   { key: "ctr", label: "CTR", title: "Cliques ÷ impressões. Vazio sem impressões", align: "right" },
-  { key: "d1", label: "D1", title: "Gasto no primeiro dia", align: "right" },
-  { key: "d2", label: "D2", title: "Gasto no segundo dia", align: "right" },
-  { key: "d3", label: "D3", title: "Gasto no terceiro dia", align: "right" },
-  { key: "d4", label: "D4", title: "Gasto no quarto dia", align: "right" },
+  { key: "d1", label: "ROAS D1", title: "ROAS do dia de lançamento", align: "right" },
+  { key: "d2", label: "ROAS D2", title: "ROAS do dia seguinte ao lançamento", align: "right" },
+  { key: "d3", label: "ROAS D3", title: "ROAS do terceiro dia", align: "right" },
+  { key: "d4", label: "ROAS D4", title: "ROAS do quarto dia", align: "right" },
   { key: "action", label: "Ação", title: "Decisão", align: "left" },
 ];
 
@@ -121,13 +122,13 @@ function readNumber(row: CreativeRow, key: SortKey): number | null {
     case "ctr":
       return row.ctr;
     case "d1":
-      return row.earlySpend[0];
+      return row.earlyDays[0]?.roas ?? null;
     case "d2":
-      return row.earlySpend[1];
+      return row.earlyDays[1]?.roas ?? null;
     case "d3":
-      return row.earlySpend[2];
+      return row.earlyDays[2]?.roas ?? null;
     case "d4":
-      return row.earlySpend[3];
+      return row.earlyDays[3]?.roas ?? null;
     default:
       return null;
   }
@@ -151,6 +152,19 @@ export function sortCreatives(rows: CreativeRow[], key: SortKey, dir: SortDir): 
   });
 }
 
+function earlyIndex(key: SortKey): number | null {
+  if (key === "d1") return 0;
+  if (key === "d2") return 1;
+  if (key === "d3") return 2;
+  if (key === "d4") return 3;
+  return null;
+}
+
+function earlyTitle(day: EarlyDay | null): string | undefined {
+  if (!day) return undefined;
+  return `${formatShortDate(day.date)} · Spend ${formatUsd(day.spend)} · Deposit Rev ${formatUsd(day.depositRevenue)}`;
+}
+
 function textFor(row: CreativeRow, key: SortKey): string {
   switch (key) {
     case "spend":
@@ -171,7 +185,7 @@ function textFor(row: CreativeRow, key: SortKey): string {
     case "d2":
     case "d3":
     case "d4":
-      return formatUsd(readNumber(row, key));
+      return formatRoas(readNumber(row, key));
     case "deposits":
     case "ftds":
     case "redeposits":
@@ -222,18 +236,22 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
                   </span>
                 </div>
               </td>
-              <td className="num">{formatDay(row.day)}</td>
-              {COLUMNS.slice(2).map((column) =>
-                column.key === "action" ? (
-                  <td key={column.key} className="left">
-                    <span className={`pill ${row.decision.verdict}`}>{VERDICT_LABEL[row.decision.verdict]}</span>
-                  </td>
-                ) : (
-                  <td key={column.key} className="num">
+              <td className="left">{formatLaunch(row.launchDate, row.day)}</td>
+              {COLUMNS.slice(2).map((column) => {
+                if (column.key === "action") {
+                  return (
+                    <td key={column.key} className="left">
+                      <span className={`pill ${row.decision.verdict}`}>{VERDICT_LABEL[row.decision.verdict]}</span>
+                    </td>
+                  );
+                }
+                const early = earlyIndex(column.key);
+                return (
+                  <td key={column.key} className="num" title={early == null ? undefined : earlyTitle(row.earlyDays[early])}>
                     {textFor(row, column.key)}
                   </td>
-                ),
-              )}
+                );
+              })}
               <td className="left">
                 <span
                   className="motivo"

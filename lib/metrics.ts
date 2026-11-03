@@ -22,6 +22,14 @@ export type RawRow = {
   convtype7?: unknown;
 };
 
+export type EarlyDay = {
+  date: string;
+  spend: number;
+  depositRevenue: number;
+  /** Null quando o dia não teve gasto. */
+  roas: number | null;
+};
+
 export type CreativeRow = {
   adId: string;
   name: string;
@@ -51,8 +59,10 @@ export type CreativeRow = {
   cpc: number | null;
   cpm: number | null;
   ctr: number | null;
-  /** Gasto dos quatro primeiros dias de vida. Null se esse dia ainda não chegou. */
-  earlySpend: [number | null, number | null, number | null, number | null];
+  /** Dia de lançamento: primeiro dia com gasto. A idade conta esse dia como dia 1. */
+  launchDate: string | null;
+  /** ROAS dos quatro primeiros dias de vida. Null se esse dia ainda não chegou. */
+  earlyDays: [EarlyDay | null, EarlyDay | null, EarlyDay | null, EarlyDay | null];
   decision: Decision;
 };
 
@@ -227,13 +237,21 @@ export function buildCreativeRows(
     const depositRevenue = sumBy(inPeriod, (day) => day.depositRevenue);
     const ftdRevenue = sumBy(inPeriod, (day) => day.ftdRevenue);
     const firstSpend = creative.days.find((day) => day.cost > 0) ?? null;
-    const dayNumber = firstSpend ? daysBetween(firstSpend.date, today) : null;
-    const earlySpend = [0, 1, 2, 3].map((offset) => {
+    const dayNumber = firstSpend ? daysBetween(firstSpend.date, today) + 1 : null;
+    const earlyDays = [0, 1, 2, 3].map((offset) => {
       if (!firstSpend) return null;
       const date = addDays(firstSpend.date, offset);
       if (date > today) return null;
-      return creative.days.find((day) => day.date === date)?.cost ?? 0;
-    }) as CreativeRow["earlySpend"];
+      const point = creative.days.find((day) => day.date === date);
+      const spend = point?.cost ?? 0;
+      const revenue = point?.depositRevenue ?? 0;
+      return {
+        date,
+        spend,
+        depositRevenue: revenue,
+        roas: spend > 0 ? revenue / spend : null,
+      };
+    }) as CreativeRow["earlyDays"];
     const stats = cohorts
       ? (cohorts.get(creative.adId) ?? {
           revenue: 0,
@@ -272,7 +290,8 @@ export function buildCreativeRows(
       cpc: perUnit(spend, clicks),
       cpm: cpm(spend, impressions),
       ctr: ctr(clicks, impressions),
-      earlySpend,
+      launchDate: firstSpend?.date ?? null,
+      earlyDays,
     });
   }
 

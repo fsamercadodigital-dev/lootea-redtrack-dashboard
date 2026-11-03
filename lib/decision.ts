@@ -9,7 +9,7 @@ export type Decision = {
 };
 
 /**
- * Métricas de um anúncio no período, mais a idade (dia 0 = primeiro dia com gasto).
+ * Métricas de um anúncio no período, mais a idade (dia 1 = dia de lançamento).
  * cohortRoas, rpr, topCustomerShare e legacyShare vêm da coorte quando ela existe.
  */
 export type DecisionInput = {
@@ -53,7 +53,7 @@ function withAlerts(input: DecisionInput, thresholds: Thresholds, verdict: Verdi
 
 /**
  * SOP Teste, Decisão e Scaling.
- * Dia 0 é o primeiro dia com gasto. Sem o prefixo de tracking no conjunto, não há veredito.
+ * Dia 1 é o lançamento, o primeiro dia com gasto. Sem a marcação do conjunto, não há veredito.
  */
 export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
   if (input.day == null) {
@@ -64,12 +64,12 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
     return withAlerts(input, thresholds, "sem-veredito", "sem marcação de conjunto");
   }
 
-  if (input.day === 0) {
+  if (input.day === 1) {
     if (input.spend >= thresholds.dia0SpendNoReg && input.signups <= 0) {
-      return withAlerts(input, thresholds, "descartar", "dia 0: gasto sem cadastro");
+      return withAlerts(input, thresholds, "descartar", "dia 1: gasto sem cadastro");
     }
     if (input.spend >= thresholds.dia0SpendNoDeposit && input.deposits <= 0) {
-      return withAlerts(input, thresholds, "descartar", "dia 0: gasto sem depósito");
+      return withAlerts(input, thresholds, "descartar", "dia 1: gasto sem depósito");
     }
     const superWinner =
       input.adRoas != null &&
@@ -80,17 +80,17 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
     if (superWinner) {
       return withAlerts(input, thresholds, "escalar", "Super Winner – Surf Scaling hoje");
     }
-    return withAlerts(input, thresholds, "manter", "dia 0, sem descarte e sem Super Winner");
+    return withAlerts(input, thresholds, "manter", "dia 1, sem descarte e sem Super Winner");
   }
 
-  if (input.day >= 1 && input.day <= thresholds.earlyDayEnd) {
+  if (input.day >= 2 && input.day <= thresholds.earlyDayEnd) {
     return withAlerts(input, thresholds, "manter", "não mexer, não subir o orçamento");
   }
 
   const rprPct = percent(input.rpr);
   const topPct = percent(input.topCustomerShare);
   const expensiveAndDry =
-    input.day >= 3 &&
+    input.day > thresholds.earlyDayEnd &&
     input.redeposits <= 0 &&
     input.cpaFtd != null &&
     input.accountAvgCpa != null &&
@@ -115,7 +115,7 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
       ? "pode subir o orçamento no ABO"
       : suspect
         ? "suspeito"
-        : "checagem dos dias 3–6";
+        : `checagem dos dias ${thresholds.earlyDayEnd + 1}–${thresholds.scaleDay - 1}`;
     return withAlerts(input, thresholds, "manter", motivo);
   }
 

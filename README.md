@@ -48,7 +48,7 @@ A chave do criativo é `rt_ad_id`. O mesmo anúncio pode repetir no dia quando o
 
 Os cartões somam a conta do período (gasto total ÷ FTDs totais). Não é a média do ROAS de cada linha.
 
-O dia 0 é o primeiro dia, dentro de 30 dias, com custo. A idade é quantos dias se passaram desde essa data até hoje na Cidade do México. Criativo mais velho que a janela aparece mais novo do que é.
+O dia 1 é o lançamento: o primeiro dia, dentro de 30 dias, com custo. A idade conta esse dia como 1, na Cidade do México. Criativo mais velho que a janela aparece mais novo do que é. ROAS D1 a D4 é a receita de depósitos daquele dia dividida pelo gasto do dia.
 
 O custo por anúncio é aproximado, porque o RedTrack ainda reparte o custo do conjunto.
 
@@ -60,10 +60,10 @@ O log traz `external_id` e os tipos FTD, Deposit e Redeposit, mas a receita da c
 
 Só entra na conta o conjunto cujo nome começa com `[E]`, `[F]` ou `[D]` e uma data. O resto fica **Sem veredito**. Os padrões estão em `lib/config.ts` e podem ser mudados em Critérios.
 
-1. Dia 0: descartar com gasto ≥ $10 sem cadastro, ou ≥ $15 sem depósito. Super Winner (ROAS de depósito > 2, FTD ≥ 15 e CPA ≤ $7,50) escala na hora.
-2. Dias 1 e 2: manter. Não descartar por um dia ruim.
-3. Até a véspera do dia 7: manter. Descartar só se o CPA for ≥ 2× a média dos anúncios com tracking e não houver redeposit.
-4. Do dia 7 em diante: escalar em CBO se o ROAS cohort for ≥ média × 1,2, com FTD ≥ 15, RPR ≥ 25% e top cliente ≤ 50%. Descartar se o ROAS cohort for < 0,8. Senão, manter em ABO.
+1. Dia 1: descartar com gasto ≥ $10 sem cadastro, ou ≥ $15 sem depósito. Super Winner (ROAS de depósito > 2, FTD ≥ 15 e CPA ≤ $7,50) escala na hora.
+2. Dias 2 e 3: manter. Não descartar por um dia ruim.
+3. Até a véspera do dia 8: manter. Descartar só se o CPA for ≥ 2× a média dos anúncios com gasto e não houver Redeposit.
+4. Do dia 8 em diante: escalar em CBO se o ROAS da coorte for ≥ média × 1,2, com FTD ≥ 15, RPR ≥ 25% e top cliente ≤ 50%. Descartar se o ROAS da coorte for < 0,8. Senão, manter em ABO.
 
 Alertas (não mudam a ação): baleia acima de 50% da receita, menos de 15 FTDs, legado acima de 40%. A média usa os criativos com gasto, salvo quando Critérios exige a marcação do conjunto.
 

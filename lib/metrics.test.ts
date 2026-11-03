@@ -4,7 +4,8 @@ import { campaignIdFor } from "./campaigns";
 import { DEFAULT_THRESHOLDS, sanitizeThresholds } from "./config";
 import { readReportRows } from "./report-body";
 import { addDays, mexicoToday, periodRange } from "./dates";
-import { formatCount, formatPercent, formatRoas, formatUsd } from "./format";
+import { formatCount, formatLaunch, formatPercent, formatRoas, formatUsd } from "./format";
+import { migrateV2Thresholds } from "./settings";
 import { buildCreativeRows, cpm, ctr, groupRows, summarize, type RawRow } from "./metrics";
 import { buildReportUrl, REPORT_FIELDS } from "./report-url";
 
@@ -106,7 +107,8 @@ test("soma o mesmo anúncio no mesmo dia e fica com o nome mais recente", () => 
   );
   const row = built.find((item) => item.adId === "120");
   assert.ok(row);
-  assert.equal(row.day, 3);
+  assert.equal(row.day, 4);
+  assert.equal(row.launchDate, "2026-10-28");
   assert.equal(row.spend, 50);
   assert.equal(row.ftds, 3);
   assert.equal(row.tracked, true);
@@ -193,7 +195,13 @@ test("o período não mistura dias de fora, e a idade usa o histórico", () => {
   assert.equal(row.spend, 18);
   assert.equal(row.ftds, 2);
   assert.equal(row.cpaFtd, 9);
-  assert.equal(row.day, 5);
+  assert.equal(row.day, 6);
+  assert.equal(row.launchDate, "2026-10-28");
+  assert.equal(row.earlyDays[0]?.roas, 0.5);
+  assert.equal(row.earlyDays[1]?.roas, 80 / 18);
+  assert.equal(row.earlyDays[2]?.roas, null);
+  assert.equal(row.earlyDays[2]?.spend, 0);
+  assert.equal(row.earlyDays[3]?.date, "2026-10-31");
   assert.equal(row.tracked, true);
   assert.equal(row.decision.verdict, "manter");
 });
@@ -375,6 +383,12 @@ test("critérios inválidos voltam para o padrão", () => {
   assert.equal(cleaned.scaleDay, 8);
   assert.equal(cleaned.checkpointRpr, 30);
   assert.equal(cleaned.discardCohort, DEFAULT_THRESHOLDS.discardCohort);
+  assert.equal(DEFAULT_THRESHOLDS.earlyDayEnd, 3);
+  assert.equal(DEFAULT_THRESHOLDS.scaleDay, 8);
+  const migrated = migrateV2Thresholds({ earlyDayEnd: 2, scaleDay: 7, superWinnerRoas: 3 });
+  assert.equal(migrated.earlyDayEnd, 3);
+  assert.equal(migrated.scaleDay, 8);
+  assert.equal(migrated.superWinnerRoas, 3);
 });
 
 test("número ausente ou infinito vira traço, e CTR é porcentagem", () => {
@@ -388,4 +402,7 @@ test("número ausente ou infinito vira traço, e CTR é porcentagem", () => {
   assert.equal(formatRoas(2.4), "2.40");
   assert.equal(formatPercent(0.025), "2.50%");
   assert.equal(formatCount(Number.NaN), "—");
+  assert.equal(formatLaunch("2026-10-24", 10), "24/10 · 10 dias");
+  assert.equal(formatLaunch("2026-11-02", 1), "02/11 · 1 dia");
+  assert.equal(formatLaunch(null, null), "—");
 });

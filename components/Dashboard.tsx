@@ -143,7 +143,7 @@ export default function Dashboard() {
           </button>
           {infoOpen ? (
             <p className="info-pop" role="note">
-              Dia 0 é o primeiro dia com gasto, até hoje na Cidade do México. Os cartões somam os
+              O dia 1 é o lançamento, o primeiro dia com gasto, na Cidade do México. Os cartões somam os
               criativos do gestor e do período. Se Critérios exigir o conjunto
               [E], [F] ou [D] seguido de data, só esses entram na média.
               O custo por criativo é aproximado enquanto o RedTrack sincroniza o custo por conjunto.
