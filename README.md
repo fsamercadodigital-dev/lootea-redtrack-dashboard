@@ -28,7 +28,7 @@ Preencha `REDTRACK_API_KEY` em `.env.local`.
 
 Cada atualização pede **um** relatório dos últimos 30 dias, anúncio por dia:
 
-`GET https://api.redtrack.io/report/v2` com `source_id` do Meta, fuso `America/Mexico_City` e, se escolher um comprador, o `campaign_id` dele. A resposta é paginada (`per=1000`) até acabar. O resultado fica em cache cerca de 10 minutos. **Atualizar** ignora o cache e consulta de novo. Trocar o período não consulta de novo.
+`GET https://api.redtrack.io/report/v2` com `source_id` do Meta, fuso `America/Mexico_City` e, se escolher um gestor, o `campaign_id` dele. A resposta é paginada (`per=1000`) até acabar. O resultado fica em cache cerca de 10 minutos. **Atualizar** ignora o cache e consulta de novo. Trocar o período não consulta de novo.
 
 Não usamos `roas`, `profit`, `cpa` nem `total_revenue` do RedTrack. Esses campos somam depósito mais de uma vez e misturam saque.
 

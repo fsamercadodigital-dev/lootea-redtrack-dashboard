@@ -99,7 +99,7 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
 
   if (input.day > thresholds.earlyDayEnd && input.day < thresholds.scaleDay) {
     if (expensiveAndDry) {
-      return withAlerts(input, thresholds, "descartar", "CPA ≥ 2× a média da conta e zero redeposits");
+      return withAlerts(input, thresholds, "descartar", "CPA ≥ 2× a média geral e zero redeposits");
     }
     const checkpointOk =
       input.ftds >= thresholds.checkpointFtd &&
@@ -120,7 +120,7 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
   }
 
   if (expensiveAndDry) {
-    return withAlerts(input, thresholds, "descartar", "CPA ≥ 2× a média da conta e zero redeposits");
+    return withAlerts(input, thresholds, "descartar", "CPA ≥ 2× a média geral e zero redeposits");
   }
 
   const topOk = topPct == null || topPct <= thresholds.scaleTopMax;

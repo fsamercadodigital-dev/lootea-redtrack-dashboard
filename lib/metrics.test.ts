@@ -4,7 +4,7 @@ import { campaignIdFor } from "./campaigns";
 import { DEFAULT_THRESHOLDS, sanitizeThresholds } from "./config";
 import { readReportRows } from "./report-body";
 import { addDays, mexicoToday, periodRange } from "./dates";
-import { buildCreativeRows, groupRows, summarize, type RawRow } from "./metrics";
+import { buildCreativeRows, cpm, ctr, groupRows, summarize, type RawRow } from "./metrics";
 import { buildReportUrl, REPORT_FIELDS } from "./report-url";
 
 test("soma o mesmo anúncio no mesmo dia e fica com o nome mais recente", () => {
@@ -257,12 +257,12 @@ test("resumo soma a conta e não a média dos ROAS", () => {
     "2026-11-03",
     DEFAULT_THRESHOLDS,
   );
-  const summary = summarize(rows, DEFAULT_THRESHOLDS);
+  const summary = summarize(rows);
   assert.equal(summary.spend, 100);
+  assert.equal(summary.depositRevenue, 110);
   assert.equal(summary.ftds, 5);
   assert.equal(summary.cpaFtd, 20);
-  assert.equal(summary.cohortRoas, 1.1);
-  assert.equal(summary.scaleBar, 1.32);
+  assert.equal(summary.roas, 1.1);
   assert.equal(summary.semVeredito, 0);
 
   const gated = buildCreativeRows(
@@ -271,12 +271,18 @@ test("resumo soma a conta e não a média dos ROAS", () => {
     "2026-11-03",
     { ...DEFAULT_THRESHOLDS, requireAdsetTag: true },
   );
-  const gatedSummary = summarize(gated, DEFAULT_THRESHOLDS);
+  const gatedSummary = summarize(gated);
   assert.equal(gated.every((item) => item.decision.verdict === "sem-veredito"), true);
   assert.equal(gatedSummary.spend, 100);
   assert.equal(gatedSummary.ftds, 5);
-  assert.equal(gatedSummary.cohortRoas, null);
-  assert.equal(gatedSummary.scaleBar, null);
+  assert.equal(gatedSummary.roas, 1.1);
+});
+
+test("CPM e CTR ficam vazios quando não há impressões", () => {
+  assert.equal(cpm(10, 0), null);
+  assert.equal(ctr(5, 0), null);
+  assert.equal(cpm(10, 1000), 10);
+  assert.equal(ctr(25, 1000), 0.025);
 });
 
 test("datas de período e fuso da Cidade do México", () => {

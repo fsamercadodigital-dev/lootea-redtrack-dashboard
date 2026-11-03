@@ -6,6 +6,7 @@ const FIELDS = [
   "rt_adgroup",
   "date",
   "clicks",
+  "impressions",
   "cost",
   "convtype2",
   "revenuetype2",

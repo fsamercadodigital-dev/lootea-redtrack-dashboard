@@ -1,6 +1,6 @@
 import type { AdCohortStats } from "./cohort";
 import type { Thresholds } from "./config";
-import { daysBetween, periodRange, type PeriodId } from "./dates";
+import { addDays, daysBetween, periodRange, type PeriodId } from "./dates";
 import { decide, type Decision } from "./decision";
 import { normalizeAdName } from "./normalize";
 import { hasFullTracking } from "./tracking";
@@ -12,11 +12,13 @@ export type RawRow = {
   rt_adgroup?: unknown;
   date?: unknown;
   clicks?: unknown;
+  impressions?: unknown;
   cost?: unknown;
   convtype2?: unknown;
   revenuetype2?: unknown;
   convtype3?: unknown;
   convtype4?: unknown;
+  revenuetype4?: unknown;
   convtype7?: unknown;
 };
 
@@ -42,21 +44,41 @@ export type CreativeRow = {
   aov: number | null;
   cps: number | null;
   clicks: number;
+  impressions: number;
   depositRevenue: number;
+  ftdRevenue: number;
+  cpaDeposit: number | null;
+  cpc: number | null;
+  cpm: number | null;
+  ctr: number | null;
+  /** Gasto dos quatro primeiros dias de vida. Null se esse dia ainda não chegou. */
+  earlySpend: [number | null, number | null, number | null, number | null];
   decision: Decision;
 };
 
 export type Summary = {
   spend: number;
+  depositRevenue: number;
+  roas: number | null;
   ftds: number;
   cpaFtd: number | null;
-  cohortRoas: number | null;
-  scaleBar: number | null;
   escalar: number;
   manter: number;
   descartar: number;
   semVeredito: number;
 };
+
+/** CPM só existe com impressões. Zero impressões não vira infinito nem 0. */
+export function cpm(cost: number, impressions: number): number | null {
+  if (!(impressions > 0)) return null;
+  return (cost / impressions) * 1000;
+}
+
+/** CTR só existe com impressões. Zero impressões não vira 0%. */
+export function ctr(clicks: number, impressions: number): number | null {
+  if (!(impressions > 0)) return null;
+  return clicks / impressions;
+}
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -90,22 +112,26 @@ function emptyDay(date: string): DailyPoint {
   return {
     date,
     clicks: 0,
+    impressions: 0,
     cost: 0,
     deposits: 0,
     depositRevenue: 0,
     signups: 0,
     ftds: 0,
+    ftdRevenue: 0,
     redeposits: 0,
   };
 }
 
 function addToDay(day: DailyPoint, row: RawRow) {
   day.clicks += num(row.clicks);
+  day.impressions += num(row.impressions);
   day.cost += num(row.cost);
   day.deposits += num(row.convtype2);
   day.depositRevenue += num(row.revenuetype2);
   day.signups += num(row.convtype3);
   day.ftds += num(row.convtype4);
+  day.ftdRevenue += num(row.revenuetype4);
   day.redeposits += num(row.convtype7);
 }
 
@@ -195,11 +221,19 @@ export function buildCreativeRows(
     const ftds = sumBy(inPeriod, (day) => day.ftds);
     const redeposits = sumBy(inPeriod, (day) => day.redeposits);
     const clicks = sumBy(inPeriod, (day) => day.clicks);
+    const impressions = sumBy(inPeriod, (day) => day.impressions);
     const signups = sumBy(inPeriod, (day) => day.signups);
     const deposits = sumBy(inPeriod, (day) => day.deposits);
     const depositRevenue = sumBy(inPeriod, (day) => day.depositRevenue);
+    const ftdRevenue = sumBy(inPeriod, (day) => day.ftdRevenue);
     const firstSpend = creative.days.find((day) => day.cost > 0) ?? null;
     const dayNumber = firstSpend ? daysBetween(firstSpend.date, today) : null;
+    const earlySpend = [0, 1, 2, 3].map((offset) => {
+      if (!firstSpend) return null;
+      const date = addDays(firstSpend.date, offset);
+      if (date > today) return null;
+      return creative.days.find((day) => day.date === date)?.cost ?? 0;
+    }) as CreativeRow["earlySpend"];
     const stats = cohorts
       ? (cohorts.get(creative.adId) ?? {
           revenue: 0,
@@ -231,7 +265,14 @@ export function buildCreativeRows(
       aov: perUnit(depositRevenue, deposits),
       cps: perUnit(spend, signups),
       clicks,
+      impressions,
       depositRevenue,
+      ftdRevenue,
+      cpaDeposit: perUnit(spend, deposits),
+      cpc: perUnit(spend, clicks),
+      cpm: cpm(spend, impressions),
+      ctr: ctr(clicks, impressions),
+      earlySpend,
     });
   }
 
@@ -277,19 +318,16 @@ export function rowsForPeriod(
   return buildCreativeRows(creatives, periodRange(today, period), today, thresholds);
 }
 
-export function summarize(rows: CreativeRow[], thresholds: Thresholds): Summary {
+export function summarize(rows: CreativeRow[]): Summary {
   const spend = rows.reduce((total, row) => total + row.spend, 0);
+  const depositRevenue = rows.reduce((total, row) => total + row.depositRevenue, 0);
   const ftds = rows.reduce((total, row) => total + row.ftds, 0);
-  const tracked = rows.filter((row) => row.tracked);
-  const trackedSpend = tracked.reduce((total, row) => total + row.spend, 0);
-  const revenue = tracked.reduce((total, row) => total + row.cohortRevenue, 0);
-  const cohortRoas = roas(revenue, trackedSpend);
   return {
     spend,
+    depositRevenue,
+    roas: roas(depositRevenue, spend),
     ftds,
     cpaFtd: perUnit(spend, ftds),
-    cohortRoas,
-    scaleBar: cohortRoas == null ? null : cohortRoas * thresholds.scaleBarMultiple,
     escalar: rows.filter((row) => row.decision.verdict === "escalar").length,
     manter: rows.filter((row) => row.decision.verdict === "manter").length,
     descartar: rows.filter((row) => row.decision.verdict === "descartar").length,

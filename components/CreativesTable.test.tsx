@@ -24,7 +24,14 @@ function row(partial: Pick<CreativeRow, "adId" | "name" | "spend"> & Partial<Cre
     aov: 20,
     cps: 4,
     clicks: 10,
+    impressions: 0,
     depositRevenue: 12,
+    ftdRevenue: 8,
+    cpaDeposit: 12,
+    cpc: 1.2,
+    cpm: null,
+    ctr: null,
+    earlySpend: [12, null, null, null],
     decision: { verdict: "manter", motivo: "não mexer, não subir budget", alerts: [] },
     ...partial,
   };
@@ -55,8 +62,11 @@ test("a tabela mostra o crachá, o motivo, o nome e o id", () => {
   assert.match(html, /amostra pequena, não escalar/);
   assert.match(html, /LT-RIFA-001/);
   assert.match(html, /222/);
-  assert.match(html, />D2</);
-  assert.match(html, /Redep\/FTD/);
+  assert.match(html, />D1</);
+  assert.match(html, /Spend/);
+  assert.match(html, /Depósitos/);
+  assert.doesNotMatch(html, /Redep\/FTD/);
+  assert.doesNotMatch(html, /Registros/);
 });
 
 test("o gasto maior vem primeiro quando a ordem é decrescente", () => {

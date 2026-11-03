@@ -97,7 +97,7 @@ export default function Dashboard() {
     );
   }, [report, thresholds]);
 
-  const summary = useMemo(() => summarize(rows, thresholds), [rows, thresholds]);
+  const summary = useMemo(() => summarize(rows), [rows]);
 
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -130,7 +130,7 @@ export default function Dashboard() {
     <main className="page">
       <header className="bar">
         <div className="brand">
-          <h1>Lootea</h1>
+          <h1 className="logo">Lootea</h1>
           <span className="meta">Meta</span>
           <button
             type="button"
@@ -171,7 +171,7 @@ export default function Dashboard() {
             </div>
           ) : null}
           <label className="buyer">
-            <span className="sr-only">Conta</span>
+            <span className="sr-only">Gestor</span>
             <select value={buyer} onChange={(event) => setBuyer(event.target.value as BuyerId)}>
               {BUYERS.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -224,7 +224,7 @@ export default function Dashboard() {
 
       {report ? <SummaryCards summary={summary} /> : null}
 
-      <div className="filters">
+      <div className="filter-card">
         <label className="search">
           <span className="sr-only">Buscar criativo</span>
           <input
@@ -255,25 +255,24 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
-        <button type="button" className="link" aria-expanded={settingsOpen} onClick={() => setSettingsOpen(true)}>
+        <button type="button" className="text-button" aria-expanded={settingsOpen} onClick={() => setSettingsOpen(true)}>
           Critérios
         </button>
+        {report?.cohortMode === "proxy" ? (
+          <p className="quiet">cohort indisponível – usando Ad Tracking</p>
+        ) : null}
       </div>
 
       {settingsOpen ? (
         <div className="drawer-root">
           <button type="button" className="backdrop" aria-label="Fechar critérios" onClick={() => setSettingsOpen(false)} />
           <aside className="drawer" role="dialog" aria-label="Critérios">
-            <button type="button" className="link close" onClick={() => setSettingsOpen(false)}>
+            <button type="button" className="text-button close" onClick={() => setSettingsOpen(false)}>
               Fechar
             </button>
             <SettingsPanel thresholds={thresholds} onChange={setThresholds} />
           </aside>
         </div>
-      ) : null}
-
-      {report?.cohortMode === "proxy" ? (
-        <p className="quiet">cohort indisponível – usando Ad Tracking</p>
       ) : null}
 
       {report && visibleRows.length === 0 ? (

@@ -1,11 +1,13 @@
 export type DailyPoint = {
   date: string;
   clicks: number;
+  impressions: number;
   cost: number;
   deposits: number;
   depositRevenue: number;
   signups: number;
   ftds: number;
+  ftdRevenue: number;
   redeposits: number;
 };
 

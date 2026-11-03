@@ -90,7 +90,7 @@ test("dias 3 a 6 mantêm, com checkpoint, suspeito ou descarte por CPA", () => {
     limits(),
   );
   assert.equal(killed.verdict, "descartar");
-  assert.equal(killed.motivo, "CPA ≥ 2× a média da conta e zero redeposits");
+  assert.equal(killed.motivo, "CPA ≥ 2× a média geral e zero redeposits");
 });
 
 test("dia 7 escala em CBO, descarta cohort abaixo de 0.8 ou fica no ABO", () => {

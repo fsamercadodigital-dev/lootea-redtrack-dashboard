@@ -9,11 +9,11 @@ type Props = {
 
 export default function SummaryCards({ summary }: Props) {
   const items = [
-    ["Gasto", formatUsd(summary.spend)],
-    ["FTDs", formatCount(summary.ftds)],
+    ["Spend", formatUsd(summary.spend)],
+    ["Deposit Rev", formatUsd(summary.depositRevenue)],
+    ["ROAS", formatRoas(summary.roas)],
+    ["FTD", formatCount(summary.ftds)],
     ["CPA FTD", formatUsd(summary.cpaFtd)],
-    ["ROAS", formatRoas(summary.cohortRoas)],
-    ["Barra", formatRoas(summary.scaleBar)],
   ] as const;
 
   return (

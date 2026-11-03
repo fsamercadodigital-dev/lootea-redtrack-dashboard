@@ -1,26 +1,31 @@
 "use client";
 
 import type { Verdict } from "@/lib/decision";
-import { formatCount, formatDay, formatPercent, formatRatio, formatRoas, formatUsd } from "@/lib/format";
+import { formatCount, formatDay, formatPercent, formatRoas, formatUsd } from "@/lib/format";
 import type { CreativeRow } from "@/lib/metrics";
 
 export type SortKey =
   | "name"
   | "day"
   | "spend"
-  | "signups"
+  | "deposits"
+  | "depositRevenue"
+  | "cpaDeposit"
+  | "aovDeposit"
   | "ftds"
-  | "cpaFtd"
-  | "cohortRoas"
-  | "rpr"
-  | "redepPerFtd"
-  | "topCustomerShare"
-  | "legacyShare"
-  | "action"
   | "redeposits"
-  | "aov"
-  | "cps"
-  | "clicks";
+  | "cpaFtd"
+  | "ftdRevenue"
+  | "roas"
+  | "cpm"
+  | "cpc"
+  | "clicks"
+  | "ctr"
+  | "d1"
+  | "d2"
+  | "d3"
+  | "d4"
+  | "action";
 
 export type SortDir = "asc" | "desc";
 
@@ -50,27 +55,30 @@ type Column = {
   label: string;
   title: string;
   align: "left" | "right";
-  secondary?: boolean;
-  split?: boolean;
 };
 
 const COLUMNS: Column[] = [
-  { key: "name", label: "Criativo", title: "Nome mais recente e ID do anúncio", align: "left" },
+  { key: "name", label: "Criativo", title: "Nome normalizado", align: "left" },
   { key: "day", label: "Dia", title: "Dia 0 é o primeiro dia com gasto", align: "right" },
-  { key: "spend", label: "Gasto", title: "Custo no período", align: "right" },
-  { key: "signups", label: "Registros", title: "Cadastros no período", align: "right" },
-  { key: "ftds", label: "FTD", title: "Primeiros depósitos no período", align: "right" },
-  { key: "cpaFtd", label: "CPA FTD", title: "Gasto ÷ FTDs", align: "right" },
-  { key: "cohortRoas", label: "ROAS cohort", title: "Receita da coorte ÷ gasto. Sem coorte, usa o Ad Tracking", align: "right" },
-  { key: "rpr", label: "RPR", title: "Percentual de FTDs com redeposit", align: "right" },
-  { key: "redepPerFtd", label: "Redep/FTD", title: "Redeposits ÷ FTDs no período", align: "right" },
-  { key: "topCustomerShare", label: "Top cliente", title: "Maior cliente ÷ receita da coorte", align: "right" },
-  { key: "legacyShare", label: "Legacy", title: "Receita do anúncio vinda de usuários de outra coorte", align: "right" },
-  { key: "action", label: "Ação", title: "Decisão, motivo e alertas", align: "left" },
-  { key: "redeposits", label: "Redeposits", title: "Depósitos que não são o primeiro", align: "right", secondary: true, split: true },
-  { key: "aov", label: "AOV", title: "Receita de depósitos ÷ depósitos", align: "right", secondary: true },
-  { key: "cps", label: "CPS", title: "Gasto ÷ cadastros", align: "right", secondary: true },
-  { key: "clicks", label: "Cliques", title: "Cliques no período", align: "right", secondary: true },
+  { key: "spend", label: "Spend", title: "Custo", align: "right" },
+  { key: "deposits", label: "Depósitos", title: "convtype2", align: "right" },
+  { key: "depositRevenue", label: "Deposit Rev", title: "revenuetype2", align: "right" },
+  { key: "cpaDeposit", label: "CPA Deposit", title: "Custo ÷ depósitos", align: "right" },
+  { key: "aovDeposit", label: "AOV Deposit", title: "Receita de depósitos ÷ depósitos", align: "right" },
+  { key: "ftds", label: "FTD", title: "convtype4", align: "right" },
+  { key: "redeposits", label: "Redeposit", title: "convtype7", align: "right" },
+  { key: "cpaFtd", label: "CPA FTD", title: "Custo ÷ FTDs", align: "right" },
+  { key: "ftdRevenue", label: "Revenue FTD", title: "revenuetype4", align: "right" },
+  { key: "roas", label: "ROAS", title: "Receita de depósitos ÷ custo", align: "right" },
+  { key: "cpm", label: "CPM", title: "Custo ÷ impressões × 1000. Vazio sem impressões", align: "right" },
+  { key: "cpc", label: "CPC", title: "Custo ÷ cliques", align: "right" },
+  { key: "clicks", label: "Cliques no link", title: "clicks", align: "right" },
+  { key: "ctr", label: "CTR", title: "Cliques ÷ impressões. Vazio sem impressões", align: "right" },
+  { key: "d1", label: "D1", title: "Gasto no primeiro dia", align: "right" },
+  { key: "d2", label: "D2", title: "Gasto no segundo dia", align: "right" },
+  { key: "d3", label: "D3", title: "Gasto no terceiro dia", align: "right" },
+  { key: "d4", label: "D4", title: "Gasto no quarto dia", align: "right" },
+  { key: "action", label: "Ação", title: "Decisão", align: "left" },
 ];
 
 function rank(value: number | null): number | null {
@@ -88,30 +96,40 @@ function readNumber(row: CreativeRow, key: SortKey): number | null {
       return row.day;
     case "spend":
       return row.spend;
-    case "signups":
-      return row.signups;
+    case "deposits":
+      return row.deposits;
+    case "depositRevenue":
+      return row.depositRevenue;
+    case "cpaDeposit":
+      return row.cpaDeposit;
+    case "aovDeposit":
+      return row.aov;
     case "ftds":
       return row.ftds;
-    case "cpaFtd":
-      return row.cpaFtd;
-    case "cohortRoas":
-      return row.cohortRoas;
-    case "rpr":
-      return row.rpr;
-    case "redepPerFtd":
-      return row.ftds > 0 ? row.redeposits / row.ftds : null;
-    case "topCustomerShare":
-      return row.topCustomerShare;
-    case "legacyShare":
-      return row.legacyShare;
     case "redeposits":
       return row.redeposits;
-    case "aov":
-      return row.aov;
-    case "cps":
-      return row.cps;
+    case "cpaFtd":
+      return row.cpaFtd;
+    case "ftdRevenue":
+      return row.ftdRevenue;
+    case "roas":
+      return row.adRoas;
+    case "cpm":
+      return row.cpm;
+    case "cpc":
+      return row.cpc;
     case "clicks":
       return row.clicks;
+    case "ctr":
+      return row.ctr;
+    case "d1":
+      return row.earlySpend[0];
+    case "d2":
+      return row.earlySpend[1];
+    case "d3":
+      return row.earlySpend[2];
+    case "d4":
+      return row.earlySpend[3];
     default:
       return null;
   }
@@ -135,23 +153,53 @@ export function sortCreatives(rows: CreativeRow[], key: SortKey, dir: SortDir): 
   });
 }
 
+function textFor(row: CreativeRow, key: SortKey): string {
+  switch (key) {
+    case "spend":
+    case "depositRevenue":
+    case "cpaDeposit":
+    case "cpaFtd":
+    case "ftdRevenue":
+    case "cpm":
+    case "cpc":
+      return formatUsd(readNumber(row, key));
+    case "aovDeposit":
+      return formatUsd(row.aov);
+    case "roas":
+      return formatRoas(row.adRoas);
+    case "ctr":
+      return formatPercent(row.ctr);
+    case "d1":
+    case "d2":
+    case "d3":
+    case "d4":
+      return formatUsd(readNumber(row, key));
+    case "deposits":
+    case "ftds":
+    case "redeposits":
+    case "clicks":
+      return formatCount(readNumber(row, key) ?? 0);
+    default:
+      return "";
+  }
+}
+
 export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props) {
   const sorted = sortCreatives(rows, sortKey, sortDir);
 
   return (
     <div className="table-wrap">
       <table>
-        <caption className="sr-only">Criativos Meta no período, com a ação recomendada</caption>
+        <caption className="sr-only">Criativos no período, com a ação recomendada</caption>
         <thead>
           <tr>
             {COLUMNS.map((column) => {
               const active = sortKey === column.key;
-              const ariaSort = active ? (sortDir === "asc" ? "ascending" : "descending") : "none";
               return (
                 <th
                   key={column.key}
-                  aria-sort={ariaSort}
-                  className={`${column.align === "left" ? "left" : "num"}${column.secondary ? " secondary" : ""}${column.split ? " split" : ""}`}
+                  aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                  className={column.align === "left" ? "left" : "num"}
                 >
                   <button type="button" className="sort" title={column.title} onClick={() => onSort(column.key)}>
                     {column.label}
@@ -160,6 +208,7 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
                 </th>
               );
             })}
+            <th className="left">Motivo</th>
           </tr>
         </thead>
         <tbody>
@@ -167,44 +216,34 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
             <tr key={row.adId} data-verdict={row.decision.verdict}>
               <td className="left">
                 <div className="creative">
-                  <span className="creative-name" title={row.rawNames.length > 1 ? row.rawNames.join("\n") : undefined}>
+                  <span
+                    className="creative-name"
+                    title={[row.name, row.adId, ...row.rawNames.filter((name) => name !== row.name)].join("\n")}
+                  >
                     {row.name}
                   </span>
-                  {row.name !== row.adId ? <span className="ad-id">{row.adId}</span> : null}
                 </div>
               </td>
               <td className="num">{formatDay(row.day)}</td>
-              <td className="num">{formatUsd(row.spend)}</td>
-              <td className="num">{formatCount(row.signups)}</td>
-              <td className="num">{formatCount(row.ftds)}</td>
-              <td className="num">{formatUsd(row.cpaFtd)}</td>
-              <td className="num">{formatRoas(row.cohortRoas)}</td>
-              <td className="num">{formatPercent(row.rpr)}</td>
-              <td className="num">{formatRatio(row.ftds > 0 ? row.redeposits / row.ftds : null)}</td>
-              <td className="num">{formatPercent(row.topCustomerShare)}</td>
-              <td className="num">{formatPercent(row.legacyShare)}</td>
+              {COLUMNS.slice(2).map((column) =>
+                column.key === "action" ? (
+                  <td key={column.key} className="left">
+                    <span className={`pill ${row.decision.verdict}`}>{VERDICT_LABEL[row.decision.verdict]}</span>
+                  </td>
+                ) : (
+                  <td key={column.key} className="num">
+                    {textFor(row, column.key)}
+                  </td>
+                ),
+              )}
               <td className="left">
-                <div className="action">
-                  <span className="verdict">
-                    <span className={`dot ${row.decision.verdict}`} aria-hidden="true" />
-                    {VERDICT_LABEL[row.decision.verdict]}
-                  </span>
-                  <span className="motivo">{row.decision.motivo}</span>
-                  {row.decision.alerts.length > 0 ? (
-                    <span className="tags">
-                      {row.decision.alerts.map((alert) => (
-                        <span key={alert} className="tag">
-                          {alert}
-                        </span>
-                      ))}
-                    </span>
-                  ) : null}
-                </div>
+                <span
+                  className="motivo"
+                  title={[row.decision.motivo, ...row.decision.alerts].join(" · ")}
+                >
+                  {[row.decision.motivo, ...row.decision.alerts].join(" · ")}
+                </span>
               </td>
-              <td className="num secondary split">{formatCount(row.redeposits)}</td>
-              <td className="num secondary">{formatUsd(row.aov)}</td>
-              <td className="num secondary">{formatUsd(row.cps)}</td>
-              <td className="num secondary">{formatCount(row.clicks)}</td>
             </tr>
           ))}
         </tbody>
