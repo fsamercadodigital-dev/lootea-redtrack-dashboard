@@ -167,7 +167,7 @@ table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto;
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
@@ -179,7 +179,8 @@ th, td {
   white-space: nowrap;
   vertical-align: middle;
   background: #ffffff;
-  overflow: hidden;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 th {
@@ -188,15 +189,17 @@ th {
   font-weight: 600;
   letter-spacing: 0;
   color: var(--muted);
-  text-align: left;
+  overflow: visible;
 }
 
-th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; }
 
 th:first-child, td:first-child {
   position: sticky;
   left: 0;
   z-index: 1;
+  max-width: 240px;
+  overflow: hidden;
   box-shadow: 1px 0 0 var(--line);
 }
 
@@ -210,12 +213,10 @@ th:first-child { z-index: 2; }
   font-weight: 600;
   letter-spacing: 0;
   color: inherit;
-  text-align: inherit;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
   white-space: nowrap;
 }
+th:first-child .sort { text-align: left; }
 
 .creative {
   display: flex;

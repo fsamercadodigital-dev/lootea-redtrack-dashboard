@@ -54,29 +54,28 @@ type Column = {
   key: SortKey;
   label: string;
   title: string;
-  align: "left" | "right";
-  width: string;
+  align: "left" | "center";
 };
 
 const COLUMNS: Column[] = [
-  { key: "name", label: "Criativo", title: "Nome normalizado", align: "left", width: "16%" },
-  { key: "day", label: "Lançamento", title: "Data do primeiro gasto e idade. O lançamento é o dia 1", align: "left", width: "7%" },
-  { key: "spend", label: "Spend", title: "Spend", align: "right", width: "6%" },
-  { key: "deposits", label: "Dep.", title: "Depósitos", align: "right", width: "4%" },
-  { key: "depositRevenue", label: "Dep. Rev", title: "Deposit Rev", align: "right", width: "6.2%" },
-  { key: "cpaDeposit", label: "CPA Dep.", title: "CPA Deposit", align: "right", width: "5.6%" },
-  { key: "aovDeposit", label: "AOV Dep.", title: "AOV Deposit", align: "right", width: "5.4%" },
-  { key: "roas", label: "ROAS", title: "ROAS", align: "right", width: "4.2%" },
-  { key: "ftds", label: "FTD", title: "FTD", align: "right", width: "3.6%" },
-  { key: "redeposits", label: "Redep.", title: "Redeposit", align: "right", width: "4.2%" },
-  { key: "cpaFtd", label: "CPA FTD", title: "CPA FTD", align: "right", width: "5.4%" },
-  { key: "ftdRevenue", label: "Rev. FTD", title: "Revenue FTD", align: "right", width: "5.6%" },
-  { key: "cpm", label: "CPM", title: "CPM", align: "right", width: "4.2%" },
-  { key: "cpc", label: "CPC", title: "CPC", align: "right", width: "4.2%" },
-  { key: "clicks", label: "Cliques", title: "Cliques no link", align: "right", width: "4.6%" },
-  { key: "ctr", label: "CTR", title: "CTR", align: "right", width: "4%" },
-  { key: "earlyRoas", label: "ROAS D1–D4", title: "ROAS do dia de lançamento e dos três dias seguintes", align: "right", width: "13%" },
-  { key: "action", label: "Ação", title: "Decisão. O motivo aparece ao passar o mouse.", align: "left", width: "6.8%" },
+  { key: "name", label: "Criativo", title: "Criativo", align: "left" },
+  { key: "day", label: "Lanç.", title: "Lançamento", align: "center" },
+  { key: "spend", label: "Spend", title: "Spend", align: "center" },
+  { key: "deposits", label: "Dep.", title: "Depósitos", align: "center" },
+  { key: "depositRevenue", label: "Dep. Rev", title: "Deposit Rev", align: "center" },
+  { key: "cpaDeposit", label: "CPA Dep.", title: "CPA Deposit", align: "center" },
+  { key: "aovDeposit", label: "AOV Dep.", title: "AOV Deposit", align: "center" },
+  { key: "roas", label: "ROAS", title: "ROAS", align: "center" },
+  { key: "ftds", label: "FTD", title: "FTD", align: "center" },
+  { key: "redeposits", label: "Redep.", title: "Redeposit", align: "center" },
+  { key: "cpaFtd", label: "CPA FTD", title: "CPA FTD", align: "center" },
+  { key: "ftdRevenue", label: "Rev. FTD", title: "Revenue FTD", align: "center" },
+  { key: "cpm", label: "CPM", title: "CPM", align: "center" },
+  { key: "cpc", label: "CPC", title: "CPC", align: "center" },
+  { key: "clicks", label: "Cliques", title: "Cliques no link", align: "center" },
+  { key: "ctr", label: "CTR", title: "CTR", align: "center" },
+  { key: "earlyRoas", label: "ROAS D1–D4", title: "ROAS D1–D4", align: "center" },
+  { key: "action", label: "Ação", title: "Ação", align: "center" },
 ];
 
 function rank(value: number | null): number | null {
@@ -203,7 +202,7 @@ function MetricCells({ row }: { row: CreativeRow }) {
       {COLUMNS.slice(2).map((column) => {
         if (column.key === "action") {
           return (
-            <td key={column.key} className="left">
+            <td key={column.key} className="center">
               <span className={`pill ${row.decision.verdict}`} title={motivoTitle(row)}>
                 {VERDICT_LABEL[row.decision.verdict]}
               </span>
@@ -212,13 +211,13 @@ function MetricCells({ row }: { row: CreativeRow }) {
         }
         if (column.key === "earlyRoas") {
           return (
-            <td key={column.key} className="num">
+            <td key={column.key} className="center">
               <EarlyRoas days={row.earlyDays} />
             </td>
           );
         }
         return (
-          <td key={column.key} className="num">
+          <td key={column.key} className="center">
             {textFor(row, column.key)}
           </td>
         );
@@ -244,11 +243,6 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort, showGes
     <div className="table-wrap">
       <table>
         <caption className="sr-only">Criativos no período, com a ação recomendada</caption>
-        <colgroup>
-          {COLUMNS.map((column) => (
-            <col key={column.key} style={{ width: column.width }} />
-          ))}
-        </colgroup>
         <thead>
           <tr>
             {COLUMNS.map((column) => {
@@ -257,7 +251,7 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort, showGes
                 <th
                   key={column.key}
                   aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                  className={column.align === "left" ? "left" : "num"}
+                  className={column.align}
                 >
                   <button type="button" className="sort" title={column.title} onClick={() => onSort(column.key)}>
                     {column.label}
@@ -306,7 +300,7 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort, showGes
                       </div>
                     </div>
                   </td>
-                  <td className="left">{formatLaunch(row.launchDate, row.day)}</td>
+                  <td className="center">{formatLaunch(row.launchDate, row.day)}</td>
                   <MetricCells row={row} />
                 </tr>
                 {expanded
@@ -318,7 +312,7 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort, showGes
                             <span className="creative-name">{child.gestorLabel}</span>
                           </div>
                         </td>
-                        <td className="left">{formatLaunch(child.launchDate, child.day)}</td>
+                        <td className="center">{formatLaunch(child.launchDate, child.day)}</td>
                         <MetricCells row={child} />
                       </tr>
                     ))
