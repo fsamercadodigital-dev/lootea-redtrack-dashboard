@@ -123,6 +123,7 @@ export async function getReport(
   buyerId: BuyerId,
   period: PeriodId,
   refresh: boolean,
+  custom?: { from: string; to: string },
 ): Promise<ReportPayload> {
   const apiKey = process.env.REDTRACK_API_KEY;
   if (!apiKey) {
@@ -134,17 +135,17 @@ export async function getReport(
   }
 
   const today = mexicoToday();
-  const from = addDays(today, -(LOOKBACK_DAYS - 1));
-  const to = today;
-  const range = periodRange(today, period);
-  const rows = await loadRows(apiKey, buyerId, from, to, refresh);
+  const range = periodRange(today, period, custom);
+  const lookbackFrom = addDays(today, -(LOOKBACK_DAYS - 1));
+  const from = range.from < lookbackFrom ? range.from : lookbackFrom;
+  const rows = await loadRows(apiKey, buyerId, from, today, refresh);
 
   return {
     ok: true,
     fetchedAt: new Date().toISOString(),
     today,
     from,
-    to,
+    to: today,
     periodFrom: range.from,
     periodTo: range.to,
     buyer: buyerId,

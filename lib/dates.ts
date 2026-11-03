@@ -1,13 +1,14 @@
 import { TIME_ZONE } from "./config";
 
-export type PeriodId = "today" | "yesterday" | "3" | "7" | "14";
+export type PeriodId = "today" | "yesterday" | "7" | "14" | "30" | "custom";
 
 export const PERIODS: { id: PeriodId; label: string }[] = [
   { id: "today", label: "Hoje" },
   { id: "yesterday", label: "Ontem" },
-  { id: "3", label: "3 dias" },
   { id: "7", label: "7 dias" },
   { id: "14", label: "14 dias" },
+  { id: "30", label: "30 dias" },
+  { id: "custom", label: "Personalizado" },
 ];
 
 export function isPeriodId(value: string): value is PeriodId {
@@ -39,14 +40,28 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((end - start) / 86_400_000);
 }
 
-/** Período inclusivo terminando em `today`, exceto Ontem. */
-export function periodRange(today: string, period: PeriodId): { from: string; to: string } {
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Período inclusivo. Personalizado usa as datas informadas, no máximo 90 dias. */
+export function periodRange(
+  today: string,
+  period: PeriodId,
+  custom?: { from: string; to: string },
+): { from: string; to: string } {
+  if (period === "custom") {
+    if (!custom || !ISO_DATE.test(custom.from) || !ISO_DATE.test(custom.to) || custom.from > custom.to) {
+      return { from: addDays(today, -6), to: today };
+    }
+    const span = daysBetween(custom.from, custom.to);
+    if (span > 90 || custom.to > today) return { from: addDays(today, -6), to: today };
+    return { from: custom.from, to: custom.to };
+  }
   if (period === "today") return { from: today, to: today };
   if (period === "yesterday") {
     const yesterday = addDays(today, -1);
     return { from: yesterday, to: yesterday };
   }
-  const length = period === "3" ? 3 : period === "7" ? 7 : 14;
+  const length = period === "7" ? 7 : period === "14" ? 14 : 30;
   return { from: addDays(today, -(length - 1)), to: today };
 }
 

@@ -57,7 +57,7 @@ export const CONVERSION_PAGE_SIZE = 10000;
 export const CONVERSION_PAGE_CAP = 8;
 
 export const BUYERS = [
-  { id: "all", label: "Todos Meta" },
+  { id: "all", label: "Todas as contas" },
   { id: "felipe", label: "Felipe" },
   { id: "erick", label: "Erick" },
   { id: "daniel", label: "Daniel" },

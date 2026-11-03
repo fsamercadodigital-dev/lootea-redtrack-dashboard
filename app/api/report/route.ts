@@ -25,9 +25,16 @@ export async function GET(request: NextRequest) {
   }
 
   const refresh = request.nextUrl.searchParams.get("refresh") === "1";
+  const custom =
+    periodParam === "custom"
+      ? {
+          from: request.nextUrl.searchParams.get("from") ?? "",
+          to: request.nextUrl.searchParams.get("to") ?? "",
+        }
+      : undefined;
 
   try {
-    const report = await getReport(buyerParam, periodParam, refresh);
+    const report = await getReport(buyerParam, periodParam, refresh, custom);
     return NextResponse.json(report, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof ReportError) {

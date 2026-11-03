@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchReport, ClientReportError } from "@/lib/client-report";
 import { BUYERS, DEFAULT_THRESHOLDS, type BuyerId, type Thresholds } from "@/lib/config";
-import { formatShortDate, PERIODS, periodRange, formatStamp, type PeriodId } from "@/lib/dates";
+import { addDays, formatShortDate, mexicoToday, PERIODS, formatStamp, type PeriodId } from "@/lib/dates";
 import type { Verdict } from "@/lib/decision";
 import { buildCreativeRows, summarize } from "@/lib/metrics";
 import { readStoredThresholds, storeThresholds } from "@/lib/settings";
@@ -39,16 +39,19 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("spend");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const requestRef = useRef<AbortController | null>(null);
 
-  const load = useCallback((nextBuyer: BuyerId, nextPeriod: PeriodId, refresh: boolean) => {
+  const load = useCallback(
+    (nextBuyer: BuyerId, nextPeriod: PeriodId, refresh: boolean, custom?: { from: string; to: string }) => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
     setError(null);
 
-    fetchReport(nextBuyer, nextPeriod, refresh, controller.signal)
+    fetchReport(nextBuyer, nextPeriod, refresh, controller.signal, custom)
       .then((payload) => {
         if (controller.signal.aborted) return;
         setReport(payload);
@@ -60,7 +63,8 @@ export default function Dashboard() {
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
-  }, []);
+  },
+  []);
 
   useEffect(() => {
     setThresholds(readStoredThresholds());
@@ -73,9 +77,11 @@ export default function Dashboard() {
   }, [settingsReady, thresholds]);
 
   useEffect(() => {
-    load(buyer, period, false);
+    const custom = period === "custom" ? { from: customFrom, to: customTo } : undefined;
+    if (period === "custom" && (!customFrom || !customTo || customFrom > customTo)) return;
+    load(buyer, period, false, custom);
     return () => requestRef.current?.abort();
-  }, [buyer, period, load]);
+  }, [buyer, period, customFrom, customTo, load]);
 
   const rows = useMemo(() => {
     if (!report) return [];
@@ -101,8 +107,16 @@ export default function Dashboard() {
     });
   }, [rows, action, search]);
 
-  const range = report ? periodRange(report.today, period) : null;
-  const buyerLabel = BUYERS.find((item) => item.id === buyer)?.label ?? "Todos Meta";
+  const buyerLabel = BUYERS.find((item) => item.id === buyer)?.label ?? "Todas as contas";
+
+  function choosePeriod(next: PeriodId) {
+    if (next === "custom" && (!customFrom || !customTo)) {
+      const today = mexicoToday();
+      setCustomFrom(addDays(today, -6));
+      setCustomTo(today);
+    }
+    setPeriod(next);
+  }
 
   function onSort(key: SortKey) {
     if (key === sortKey) {
@@ -117,15 +131,26 @@ export default function Dashboard() {
     <main className="page">
       <header className="top">
         <div className="brand">
-          <span className="mark" aria-hidden="true">
-            L
+          <h1 className="sr-only">Lootea Meta</h1>
+          <p className="logo" aria-hidden="true">Lootea</p>
+          <span className="meta-label">
+            <svg viewBox="0 0 20 12" aria-hidden="true" className="meta-mark">
+              <path
+                fill="#0668E1"
+                d="M5.2 6c0-1.5.7-2.6 1.9-2.6.7 0 1.2.3 1.6.9.4-.6.9-.9 1.6-.9 1.2 0 1.9 1.1 1.9 2.6S11.5 8.6 10.3 8.6c-.7 0-1.2-.3-1.6-.9-.4.6-.9.9-1.6.9C5.9 8.6 5.2 7.5 5.2 6zm-4 0c0-1.5.7-2.6 1.9-2.6.7 0 1.2.3 1.6.9.4-.6.9-.9 1.6-.9.3 0 .6.1.8.2-.5.6-.8 1.5-.8 2.4s.3 1.8.8 2.4c-.2.1-.5.2-.8.2-.7 0-1.2-.3-1.6-.9-.4.6-.9.9-1.6.9C1.9 8.6 1.2 7.5 1.2 6z"
+              />
+            </svg>
+            Meta
           </span>
-          <div>
-            <h1>Lootea · Criativos Meta</h1>
-            <p className="subtitle">Decisão por primeiro depósito</p>
-          </div>
         </div>
-        <button type="button" className="primary" onClick={() => load(buyer, period, true)} disabled={loading}>
+        <button
+          type="button"
+          className="primary"
+          onClick={() =>
+            load(buyer, period, true, period === "custom" ? { from: customFrom, to: customTo } : undefined)
+          }
+          disabled={loading}
+        >
           {loading ? "Atualizando…" : "Atualizar"}
         </button>
       </header>
@@ -138,14 +163,26 @@ export default function Dashboard() {
               type="button"
               className={item.id === period ? "segment selected" : "segment"}
               aria-pressed={item.id === period}
-              onClick={() => setPeriod(item.id)}
+              onClick={() => choosePeriod(item.id)}
             >
               {item.label}
             </button>
           ))}
         </div>
+        {period === "custom" ? (
+          <div className="custom-range">
+            <label>
+              De
+              <input type="date" value={customFrom} max={customTo || undefined} onChange={(event) => setCustomFrom(event.target.value)} />
+            </label>
+            <label>
+              Até
+              <input type="date" value={customTo} min={customFrom || undefined} max={mexicoToday()} onChange={(event) => setCustomTo(event.target.value)} />
+            </label>
+          </div>
+        ) : null}
         <label className="buyer">
-          <span>Comprador</span>
+          <span className="sr-only">Conta</span>
           <select value={buyer} onChange={(event) => setBuyer(event.target.value as BuyerId)}>
             {BUYERS.map((item) => (
               <option key={item.id} value={item.id}>
@@ -179,13 +216,13 @@ export default function Dashboard() {
         </div>
       ) : null}
 
-      {report && range ? (
+      {report ? (
         <>
           <p className="scope">
             {buyerLabel}
             {" · "}
-            {formatShortDate(range.from)}
-            {range.from !== range.to ? ` a ${formatShortDate(range.to)}` : ""}
+            {formatShortDate(report.periodFrom)}
+            {report.periodFrom !== report.periodTo ? ` a ${formatShortDate(report.periodTo)}` : ""}
             {" · "}
             {rows.length} {rows.length === 1 ? "criativo" : "criativos"}
           </p>

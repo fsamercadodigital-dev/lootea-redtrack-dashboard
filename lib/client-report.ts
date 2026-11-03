@@ -34,8 +34,13 @@ export async function fetchReport(
   period: PeriodId,
   refresh: boolean,
   signal: AbortSignal,
+  custom?: { from: string; to: string },
 ): Promise<ReportPayload> {
   const params = new URLSearchParams({ buyer, period });
+  if (period === "custom" && custom) {
+    params.set("from", custom.from);
+    params.set("to", custom.to);
+  }
   if (refresh) params.set("refresh", "1");
 
   let response: Response;

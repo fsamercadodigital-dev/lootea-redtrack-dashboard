@@ -244,9 +244,13 @@ test("datas de período e fuso da Cidade do México", () => {
   assert.equal(mexicoToday(new Date("2026-11-03T06:30:00Z")), "2026-11-03");
   assert.deepEqual(periodRange("2026-11-03", "today"), { from: "2026-11-03", to: "2026-11-03" });
   assert.deepEqual(periodRange("2026-11-03", "yesterday"), { from: "2026-11-02", to: "2026-11-02" });
-  assert.deepEqual(periodRange("2026-11-03", "3"), { from: "2026-11-01", to: "2026-11-03" });
   assert.deepEqual(periodRange("2026-11-03", "7"), { from: "2026-10-28", to: "2026-11-03" });
   assert.deepEqual(periodRange("2026-11-03", "14"), { from: "2026-10-21", to: "2026-11-03" });
+  assert.deepEqual(periodRange("2026-11-03", "30"), { from: "2026-10-05", to: "2026-11-03" });
+  assert.deepEqual(periodRange("2026-11-03", "custom", { from: "2026-10-20", to: "2026-10-25" }), {
+    from: "2026-10-20",
+    to: "2026-10-25",
+  });
   assert.equal(addDays("2026-11-03", -29), "2026-10-05");
 });
 
