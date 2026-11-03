@@ -84,11 +84,11 @@ test("soma o mesmo anúncio no mesmo dia e fica com o nome mais recente", () => 
   ];
 
   const grouped = groupRows(rows);
-  assert.equal(grouped.length, 2);
+  assert.equal(grouped.length, 4);
 
-  const ad = grouped.find((item) => item.adId === "120");
+  const ad = grouped.find((item) => item.name === "VELHO");
   assert.ok(ad);
-  assert.equal(ad.name, "Novo");
+  assert.equal(ad.adId, "120");
   const day28 = ad.days.find((day) => day.date === "2026-10-28");
   assert.ok(day28);
   assert.equal(day28.cost, 50);
@@ -114,6 +114,32 @@ test("soma o mesmo anúncio no mesmo dia e fica com o nome mais recente", () => 
 
   const other = built.find((item) => item.adId === "999");
   assert.equal(other, undefined);
+});
+
+test("o mesmo criativo em outro anúncio e outra caixa entra na mesma soma", () => {
+  const grouped = groupRows([
+    {
+      rt_ad_id: "1",
+      rt_ad: "[HT7] - AD017-FB-ELEKTRA",
+      date: "2026-11-01",
+      clicks: 4,
+      cost: 10,
+      convtype4: 1,
+    },
+    {
+      rt_ad_id: "2",
+      rt_ad: "ad017-fb-elektra",
+      date: "2026-11-01",
+      clicks: 3,
+      cost: 5,
+      convtype4: 1,
+    },
+  ]);
+  assert.equal(grouped.length, 1);
+  assert.equal(grouped[0]?.name, "AD017-FB-ELEKTRA");
+  assert.equal(grouped[0]?.days[0]?.cost, 15);
+  assert.equal(grouped[0]?.days[0]?.ftds, 2);
+  assert.deepEqual(grouped[0]?.rawNames, ["[HT7] - AD017-FB-ELEKTRA", "ad017-fb-elektra"]);
 });
 
 test("o período não mistura dias de fora, e a idade usa o histórico", () => {

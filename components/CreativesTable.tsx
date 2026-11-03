@@ -167,7 +167,9 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
             <tr key={row.adId} data-verdict={row.decision.verdict}>
               <td className="left">
                 <div className="creative">
-                  <span className="creative-name">{row.name}</span>
+                  <span className="creative-name" title={row.rawNames.length > 1 ? row.rawNames.join("\n") : undefined}>
+                    {row.name}
+                  </span>
                   {row.name !== row.adId ? <span className="ad-id">{row.adId}</span> : null}
                 </div>
               </td>

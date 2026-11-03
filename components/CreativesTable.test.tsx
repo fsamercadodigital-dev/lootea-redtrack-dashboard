@@ -7,6 +7,7 @@ import type { CreativeRow } from "../lib/metrics";
 function row(partial: Pick<CreativeRow, "adId" | "name" | "spend"> & Partial<CreativeRow>): CreativeRow {
   return {
     adset: "[E] 01/11",
+    rawNames: [partial.name],
     tracked: true,
     day: 2,
     signups: 3,

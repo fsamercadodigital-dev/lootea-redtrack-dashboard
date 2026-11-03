@@ -12,6 +12,7 @@ export type DailyPoint = {
 export type CreativeSeries = {
   adId: string;
   name: string;
+  rawNames: string[];
   adset: string;
   days: DailyPoint[];
 };

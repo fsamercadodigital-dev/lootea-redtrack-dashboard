@@ -2,6 +2,7 @@ import type { AdCohortStats } from "./cohort";
 import type { Thresholds } from "./config";
 import { daysBetween, periodRange, type PeriodId } from "./dates";
 import { decide, type Decision } from "./decision";
+import { normalizeAdName } from "./normalize";
 import { hasFullTracking } from "./tracking";
 import type { CreativeSeries, DailyPoint } from "./types";
 
@@ -23,6 +24,7 @@ export type CreativeRow = {
   adId: string;
   name: string;
   adset: string;
+  rawNames: string[];
   tracked: boolean;
   day: number | null;
   spend: number;
@@ -108,31 +110,40 @@ function addToDay(day: DailyPoint, row: RawRow) {
 }
 
 /**
- * Soma por rt_ad_id. Linhas repetidas no mesmo dia (conjunto renomeado) entram na soma.
- * O nome exibido é o rt_ad mais recente que não está vazio.
+ * Soma pelo nome normalizado do criativo. O mesmo nome em outro anúncio ou com outra
+ * capitalização entra na mesma linha. O id mostrado é o do dia mais recente.
  */
 export function groupRows(rows: RawRow[]): CreativeSeries[] {
-  const byAd = new Map<
+  const byName = new Map<
     string,
-    { name: string; nameDate: string; adset: string; adsetDate: string; days: Map<string, DailyPoint> }
+    {
+      adId: string;
+      adIdDate: string;
+      rawNames: Set<string>;
+      adset: string;
+      adsetDate: string;
+      days: Map<string, DailyPoint>;
+    }
   >();
 
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
-    const adId = text(row.rt_ad_id);
     const date = text(row.date);
-    if (!adId || !DATE_PATTERN.test(date)) continue;
+    if (!DATE_PATTERN.test(date)) continue;
+    const adId = text(row.rt_ad_id);
+    const rawName = text(row.rt_ad);
+    const key = normalizeAdName(rawName);
 
-    let creative = byAd.get(adId);
+    let creative = byName.get(key);
     if (!creative) {
-      creative = { name: adId, nameDate: "", adset: "", adsetDate: "", days: new Map() };
-      byAd.set(adId, creative);
+      creative = { adId: "", adIdDate: "", rawNames: new Set(), adset: "", adsetDate: "", days: new Map() };
+      byName.set(key, creative);
     }
 
-    const label = text(row.rt_ad);
-    if (label && (!creative.nameDate || date > creative.nameDate)) {
-      creative.name = label;
-      creative.nameDate = date;
+    if (rawName) creative.rawNames.add(rawName);
+    if (adId && (!creative.adIdDate || date >= creative.adIdDate)) {
+      creative.adId = adId;
+      creative.adIdDate = date;
     }
     const adset = text(row.rt_adgroup);
     if (adset && (!creative.adsetDate || date > creative.adsetDate)) {
@@ -145,9 +156,10 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
     creative.days.set(date, day);
   }
 
-  return Array.from(byAd, ([adId, creative]) => ({
-    adId,
-    name: creative.name,
+  return Array.from(byName, ([name, creative]) => ({
+    adId: creative.adId || name,
+    name,
+    rawNames: Array.from(creative.rawNames).sort((a, b) => a.localeCompare(b)),
     adset: creative.adset,
     days: Array.from(creative.days.values()).sort((a, b) => a.date.localeCompare(b.date)),
   }));
@@ -201,6 +213,7 @@ export function buildCreativeRows(
       adId: creative.adId,
       name: creative.name,
       adset: creative.adset,
+      rawNames: creative.rawNames,
       tracked: hasFullTracking(creative.adset),
       day: dayNumber,
       spend,
