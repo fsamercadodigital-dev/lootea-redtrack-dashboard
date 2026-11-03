@@ -1,14 +1,12 @@
 import "server-only";
 
 import { campaignIdFor } from "./campaigns";
-import { buildCohorts, cohortIsUsable, type ConvEvent } from "./cohort";
-import { loadConversionEvents, type ConversionLoad } from "./conversions";
 import { CACHE_TTL_MS, LOOKBACK_DAYS, PAGE_SIZE, type BuyerId } from "./config";
 import { addDays, mexicoToday, periodRange, type PeriodId } from "./dates";
 import { groupRows, type RawRow } from "./metrics";
 import { readReportRows } from "./report-body";
 import { buildReportUrl } from "./report-url";
-import type { CohortMode, ReportPayload } from "./types";
+import type { ReportPayload } from "./types";
 
 export class ReportError extends Error {
   stage: string;
@@ -23,21 +21,13 @@ export class ReportError extends Error {
 }
 
 type ReportCacheEntry = { expires: number; rows: RawRow[] };
-type ConvCacheEntry = { expires: number; from: string; to: string; loaded: ConversionLoad | null };
 
 const REPORT_CACHE_KEY = "__looteaReportRows";
-const CONV_CACHE_KEY = "__looteaConversions";
 
 function reportCache(): Map<string, ReportCacheEntry> {
   const host = globalThis as typeof globalThis & { [REPORT_CACHE_KEY]?: Map<string, ReportCacheEntry> };
   if (!host[REPORT_CACHE_KEY]) host[REPORT_CACHE_KEY] = new Map();
   return host[REPORT_CACHE_KEY];
-}
-
-function conversionCache(): { current?: ConvCacheEntry } {
-  const host = globalThis as typeof globalThis & { [CONV_CACHE_KEY]?: { current?: ConvCacheEntry } };
-  if (!host[CONV_CACHE_KEY]) host[CONV_CACHE_KEY] = {};
-  return host[CONV_CACHE_KEY];
 }
 
 async function fetchPage(
@@ -129,15 +119,6 @@ async function loadRows(
   return rows;
 }
 
-async function loadEvents(apiKey: string, from: string, to: string, refresh: boolean): Promise<ConversionLoad | null> {
-  const cache = conversionCache();
-  const hit = cache.current;
-  if (!refresh && hit && hit.expires > Date.now() && hit.from === from && hit.to === to) return hit.loaded;
-  const loaded = await loadConversionEvents(apiKey, from, to);
-  cache.current = { expires: Date.now() + CACHE_TTL_MS, from, to, loaded };
-  return loaded;
-}
-
 export async function getReport(
   buyerId: BuyerId,
   period: PeriodId,
@@ -157,25 +138,6 @@ export async function getReport(
   const to = today;
   const range = periodRange(today, period);
   const rows = await loadRows(apiKey, buyerId, from, to, refresh);
-  const creatives = groupRows(rows);
-  const loaded = await loadEvents(apiKey, from, to, refresh);
-  const events: ConvEvent[] | null = loaded && cohortIsUsable(loaded.events) ? loaded.events : null;
-  const cohortMode: CohortMode = events ? "full" : "proxy";
-  const cohorts = events
-    ? buildCohorts(
-        events,
-        creatives.map((creative) => ({
-          adId: creative.adId,
-          d1: creative.days.find((day) => day.cost > 0)?.date ?? null,
-        })),
-        range,
-      )
-    : null;
-
-  const cohortRecord: ReportPayload["cohorts"] = {};
-  if (cohorts) {
-    for (const [adId, stats] of cohorts) cohortRecord[adId] = stats;
-  }
 
   return {
     ok: true,
@@ -186,20 +148,8 @@ export async function getReport(
     periodFrom: range.from,
     periodTo: range.to,
     buyer: buyerId,
-    cohortMode,
-    conversionTypes: loaded?.types ?? [],
-    conversionRows: loaded?.rows ?? 0,
-    conversionFtdFlags: loaded?.ftdFlags ?? 0,
-    conversionMatch: {
-      ftdEvents: loaded?.ftdEvents ?? 0,
-      ftdWithUser: loaded?.ftdWithUser ?? 0,
-      ftdWithAd: loaded?.ftdWithAd ?? 0,
-      ftdExternal: loaded?.ftdExternal ?? 0,
-      ftdClick: loaded?.ftdClick ?? 0,
-      depositWithUser: loaded?.depositWithUser ?? 0,
-      depositWithAd: loaded?.depositWithAd ?? 0,
-    },
-    creatives,
-    cohorts: cohortRecord,
+    cohortMode: "proxy",
+    creatives: groupRows(rows),
+    cohorts: {},
   };
 }

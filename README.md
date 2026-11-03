@@ -54,9 +54,7 @@ O custo por anúncio é aproximado, porque o RedTrack ainda reparte o custo do c
 
 ## Coorte
 
-O usuário (`external_id`) fica no anúncio do primeiro FTD (`type4`, `sub1` / `rt_ad_id`). Todos os depósitos dele (`type2`), em qualquer anúncio ou no orgânico, entram na receita dessa coorte no período. RPR é a parcela desses usuários com um `type7` ou um segundo depósito. Legacy é a parcela da receita de Ad Tracking do anúncio que veio de usuário cujo primeiro FTD é de outro anúncio ou anterior ao dia 0.
-
-Se o log de conversões não trouxer isso, o painel avisa `cohort indisponível – usando Ad Tracking` e usa `revenuetype2 ÷ gasto`. Nesse caso o RPR vira 100% se houve redeposit e 0% se não houve.
+O log traz `external_id` e os tipos FTD, Deposit e Redeposit, mas a receita da coorte por anúncio não fechou (os depósitos não amarraram no primeiro FTD). Por isso o painel avisa `cohort indisponível – usando Ad Tracking`: ROAS é `revenuetype2 ÷ gasto` e o RPR fica 100% se houve redeposit, senão 0%. Top cliente e legacy ficam vazios.
 
 ## Decisão
 
