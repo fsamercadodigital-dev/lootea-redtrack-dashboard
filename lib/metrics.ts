@@ -1,11 +1,14 @@
-import { daysBetween, addDays, periodRange, type PeriodId } from "./dates";
-import { decide, type Decision } from "./decision";
+import type { AdCohortStats } from "./cohort";
 import type { Thresholds } from "./config";
+import { daysBetween, periodRange, type PeriodId } from "./dates";
+import { decide, type Decision } from "./decision";
+import { hasFullTracking } from "./tracking";
 import type { CreativeSeries, DailyPoint } from "./types";
 
 export type RawRow = {
   rt_ad_id?: unknown;
   rt_ad?: unknown;
+  rt_adgroup?: unknown;
   date?: unknown;
   clicks?: unknown;
   cost?: unknown;
@@ -19,21 +22,25 @@ export type RawRow = {
 export type CreativeRow = {
   adId: string;
   name: string;
+  adset: string;
+  tracked: boolean;
   day: number | null;
   spend: number;
+  signups: number;
+  deposits: number;
   ftds: number;
   cpaFtd: number | null;
-  roas: number | null;
-  roasD1: number | null;
-  roasThroughD4: number | null;
+  adRoas: number | null;
+  cohortRevenue: number;
+  cohortRoas: number | null;
+  rpr: number | null;
+  topCustomerShare: number | null;
+  legacyShare: number | null;
   redeposits: number;
   aov: number | null;
   cps: number | null;
-  signups: number;
   clicks: number;
   depositRevenue: number;
-  maxDailySpend: number;
-  scaleRoas: number | null;
   decision: Decision;
 };
 
@@ -41,11 +48,12 @@ export type Summary = {
   spend: number;
   ftds: number;
   cpaFtd: number | null;
-  roas: number | null;
-  depositRevenue: number;
+  cohortRoas: number | null;
+  scaleBar: number | null;
   escalar: number;
   manter: number;
   descartar: number;
+  semVeredito: number;
 };
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -106,7 +114,7 @@ function addToDay(day: DailyPoint, row: RawRow) {
 export function groupRows(rows: RawRow[]): CreativeSeries[] {
   const byAd = new Map<
     string,
-    { name: string; nameDate: string; days: Map<string, DailyPoint> }
+    { name: string; nameDate: string; adset: string; adsetDate: string; days: Map<string, DailyPoint> }
   >();
 
   for (const row of rows) {
@@ -117,7 +125,7 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
 
     let creative = byAd.get(adId);
     if (!creative) {
-      creative = { name: adId, nameDate: "", days: new Map() };
+      creative = { name: adId, nameDate: "", adset: "", adsetDate: "", days: new Map() };
       byAd.set(adId, creative);
     }
 
@@ -125,6 +133,11 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
     if (label && (!creative.nameDate || date > creative.nameDate)) {
       creative.name = label;
       creative.nameDate = date;
+    }
+    const adset = text(row.rt_adgroup);
+    if (adset && (!creative.adsetDate || date > creative.adsetDate)) {
+      creative.adset = adset;
+      creative.adsetDate = date;
     }
 
     const day = creative.days.get(date) ?? emptyDay(date);
@@ -135,6 +148,7 @@ export function groupRows(rows: RawRow[]): CreativeSeries[] {
   return Array.from(byAd, ([adId, creative]) => ({
     adId,
     name: creative.name,
+    adset: creative.adset,
     days: Array.from(creative.days.values()).sort((a, b) => a.date.localeCompare(b.date)),
   }));
 }
@@ -143,11 +157,13 @@ function sumBy(days: DailyPoint[], pick: (day: DailyPoint) => number): number {
   return days.reduce((total, day) => total + pick(day), 0);
 }
 
-/** ROAS só dos dias cujo gasto do dia atingiu o limite. Sem esses dias, null. */
-export function roasOnHighSpendDays(days: DailyPoint[], threshold: number): number | null {
-  const hot = days.filter((day) => day.cost >= threshold);
-  if (hot.length === 0) return null;
-  return roas(sumBy(hot, (day) => day.depositRevenue), sumBy(hot, (day) => day.cost));
+function proxyCohort(ftds: number, redeposits: number, depositRevenue: number): AdCohortStats {
+  return {
+    revenue: depositRevenue,
+    rpr: ftds > 0 ? (redeposits > 0 ? 1 : 0) : null,
+    topCustomerShare: null,
+    legacyShare: null,
+  };
 }
 
 export function buildCreativeRows(
@@ -155,8 +171,9 @@ export function buildCreativeRows(
   period: { from: string; to: string },
   today: string,
   thresholds: Thresholds,
+  cohorts: Map<string, AdCohortStats> | null = null,
 ): CreativeRow[] {
-  const rows: CreativeRow[] = [];
+  const drafts: Omit<CreativeRow, "decision">[] = [];
 
   for (const creative of creatives) {
     const inPeriod = creative.days.filter((day) => day.date >= period.from && day.date <= period.to);
@@ -169,70 +186,73 @@ export function buildCreativeRows(
     const signups = sumBy(inPeriod, (day) => day.signups);
     const deposits = sumBy(inPeriod, (day) => day.deposits);
     const depositRevenue = sumBy(inPeriod, (day) => day.depositRevenue);
+    const firstSpend = creative.days.find((day) => day.cost > 0) ?? null;
+    const dayNumber = firstSpend ? daysBetween(firstSpend.date, today) : null;
+    const stats = cohorts
+      ? (cohorts.get(creative.adId) ?? {
+          revenue: 0,
+          rpr: null,
+          topCustomerShare: null,
+          legacyShare: null,
+        })
+      : proxyCohort(ftds, redeposits, depositRevenue);
 
-    const first = creative.days.find((day) => day.cost > 0 || day.clicks > 0) ?? null;
-    let dayNumber: number | null = null;
-    let roasD1: number | null = null;
-    let roasThroughD4: number | null = null;
-
-    if (first) {
-      dayNumber = daysBetween(first.date, today) + 1;
-      roasD1 = roas(first.depositRevenue, first.cost);
-      const throughDay4 = addDays(first.date, 3);
-      const cohort = creative.days.filter(
-        (day) => day.date >= first.date && day.date <= throughDay4,
-      );
-      roasThroughD4 = roas(
-        sumBy(cohort, (day) => day.depositRevenue),
-        sumBy(cohort, (day) => day.cost),
-      );
-    }
-
-    const maxDailySpend = creative.days.reduce((max, day) => Math.max(max, day.cost), 0);
-    const scaleRoas =
-      thresholds.scaleSpendThreshold == null
-        ? null
-        : roasOnHighSpendDays(creative.days, thresholds.scaleSpendThreshold);
-
-    const decision = decide(
-      {
-        spend,
-        ftds,
-        redeposits,
-        cpaFtd: perUnit(spend, ftds),
-        roasD1,
-        roasThroughD4,
-        aov: perUnit(depositRevenue, deposits),
-        cps: perUnit(spend, signups),
-        day: dayNumber,
-        scaleRoas,
-      },
-      thresholds,
-    );
-
-    rows.push({
+    drafts.push({
       adId: creative.adId,
       name: creative.name,
+      adset: creative.adset,
+      tracked: hasFullTracking(creative.adset),
       day: dayNumber,
       spend,
+      signups,
+      deposits,
       ftds,
       cpaFtd: perUnit(spend, ftds),
-      roas: roas(depositRevenue, spend),
-      roasD1,
-      roasThroughD4,
+      adRoas: roas(depositRevenue, spend),
+      cohortRevenue: stats.revenue,
+      cohortRoas: roas(stats.revenue, spend),
+      rpr: stats.rpr,
+      topCustomerShare: stats.topCustomerShare,
+      legacyShare: stats.legacyShare,
       redeposits,
       aov: perUnit(depositRevenue, deposits),
       cps: perUnit(spend, signups),
-      signups,
       clicks,
       depositRevenue,
-      maxDailySpend,
-      scaleRoas,
-      decision,
     });
   }
 
-  return rows;
+  const tracked = drafts.filter((row) => row.tracked);
+  const trackedSpend = tracked.reduce((total, row) => total + row.spend, 0);
+  const trackedFtds = tracked.reduce((total, row) => total + row.ftds, 0);
+  const trackedRevenue = tracked.reduce((total, row) => total + row.cohortRevenue, 0);
+  const accountAvgCpa = perUnit(trackedSpend, trackedFtds);
+  const avgCohortRoas = roas(trackedRevenue, trackedSpend);
+  const scaleBar = avgCohortRoas == null ? null : avgCohortRoas * thresholds.scaleBarMultiple;
+
+  return drafts.map((row) => ({
+    ...row,
+    decision: decide(
+      {
+        tracked: row.tracked,
+        day: row.day,
+        spend: row.spend,
+        signups: row.signups,
+        deposits: row.deposits,
+        ftds: row.ftds,
+        redeposits: row.redeposits,
+        cpaFtd: row.cpaFtd,
+        adRoas: row.adRoas,
+        cohortRoas: row.cohortRoas,
+        rpr: row.rpr,
+        topCustomerShare: row.topCustomerShare,
+        legacyShare: row.legacyShare,
+        accountAvgCpa,
+        scaleBar,
+      },
+      thresholds,
+    ),
+  }));
 }
 
 export function rowsForPeriod(
@@ -244,18 +264,21 @@ export function rowsForPeriod(
   return buildCreativeRows(creatives, periodRange(today, period), today, thresholds);
 }
 
-export function summarize(rows: CreativeRow[]): Summary {
-  const spend = rows.reduce((total, row) => total + row.spend, 0);
-  const ftds = rows.reduce((total, row) => total + row.ftds, 0);
-  const depositRevenue = rows.reduce((total, row) => total + row.depositRevenue, 0);
+export function summarize(rows: CreativeRow[], thresholds: Thresholds): Summary {
+  const tracked = rows.filter((row) => row.tracked);
+  const spend = tracked.reduce((total, row) => total + row.spend, 0);
+  const ftds = tracked.reduce((total, row) => total + row.ftds, 0);
+  const revenue = tracked.reduce((total, row) => total + row.cohortRevenue, 0);
+  const cohortRoas = roas(revenue, spend);
   return {
     spend,
     ftds,
     cpaFtd: perUnit(spend, ftds),
-    roas: roas(depositRevenue, spend),
-    depositRevenue,
+    cohortRoas,
+    scaleBar: cohortRoas == null ? null : cohortRoas * thresholds.scaleBarMultiple,
     escalar: rows.filter((row) => row.decision.verdict === "escalar").length,
     manter: rows.filter((row) => row.decision.verdict === "manter").length,
     descartar: rows.filter((row) => row.decision.verdict === "descartar").length,
+    semVeredito: rows.filter((row) => row.decision.verdict === "sem-veredito").length,
   };
 }

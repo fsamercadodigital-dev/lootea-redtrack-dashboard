@@ -1,12 +1,14 @@
 import "server-only";
 
-import { addDays, mexicoToday } from "./dates";
 import { campaignIdFor } from "./campaigns";
+import { buildCohorts, type ConvEvent } from "./cohort";
+import { loadConversionEvents } from "./conversions";
 import { CACHE_TTL_MS, LOOKBACK_DAYS, PAGE_SIZE, type BuyerId } from "./config";
+import { addDays, mexicoToday, periodRange, type PeriodId } from "./dates";
 import { groupRows, type RawRow } from "./metrics";
 import { readReportRows } from "./report-body";
 import { buildReportUrl } from "./report-url";
-import type { ReportPayload } from "./types";
+import type { CohortMode, ReportPayload } from "./types";
 
 export class ReportError extends Error {
   stage: string;
@@ -20,14 +22,22 @@ export class ReportError extends Error {
   }
 }
 
-type CacheEntry = { expires: number; value: ReportPayload };
+type ReportCacheEntry = { expires: number; rows: RawRow[] };
+type ConvCacheEntry = { expires: number; from: string; to: string; events: ConvEvent[] | null };
 
-const CACHE_KEY = "__looteaReportCache";
+const REPORT_CACHE_KEY = "__looteaReportRows";
+const CONV_CACHE_KEY = "__looteaConversions";
 
-function cacheStore(): Map<string, CacheEntry> {
-  const host = globalThis as typeof globalThis & { [CACHE_KEY]?: Map<string, CacheEntry> };
-  if (!host[CACHE_KEY]) host[CACHE_KEY] = new Map();
-  return host[CACHE_KEY];
+function reportCache(): Map<string, ReportCacheEntry> {
+  const host = globalThis as typeof globalThis & { [REPORT_CACHE_KEY]?: Map<string, ReportCacheEntry> };
+  if (!host[REPORT_CACHE_KEY]) host[REPORT_CACHE_KEY] = new Map();
+  return host[REPORT_CACHE_KEY];
+}
+
+function conversionCache(): { current?: ConvCacheEntry } {
+  const host = globalThis as typeof globalThis & { [CONV_CACHE_KEY]?: { current?: ConvCacheEntry } };
+  if (!host[CONV_CACHE_KEY]) host[CONV_CACHE_KEY] = {};
+  return host[CONV_CACHE_KEY];
 }
 
 async function fetchPage(
@@ -101,7 +111,38 @@ async function fetchAllPages(
  * Um relatório largo de 30 dias por comprador, reaproveitado por cerca de 10 minutos.
  * A chave da API não entra no cache em memória nem em mensagens de erro.
  */
-export async function getReport(buyerId: BuyerId, refresh: boolean): Promise<ReportPayload> {
+async function loadRows(
+  apiKey: string,
+  buyerId: BuyerId,
+  from: string,
+  to: string,
+  refresh: boolean,
+): Promise<RawRow[]> {
+  const cacheKey = `${buyerId}:${from}:${to}`;
+  const cache = reportCache();
+  if (!refresh) {
+    const hit = cache.get(cacheKey);
+    if (hit && hit.expires > Date.now()) return hit.rows;
+  }
+  const rows = await fetchAllPages(apiKey, from, to, campaignIdFor(buyerId), refresh);
+  cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, rows });
+  return rows;
+}
+
+async function loadEvents(apiKey: string, from: string, to: string, refresh: boolean): Promise<ConvEvent[] | null> {
+  const cache = conversionCache();
+  const hit = cache.current;
+  if (!refresh && hit && hit.expires > Date.now() && hit.from === from && hit.to === to) return hit.events;
+  const events = await loadConversionEvents(apiKey, from, to);
+  cache.current = { expires: Date.now() + CACHE_TTL_MS, from, to, events };
+  return events;
+}
+
+export async function getReport(
+  buyerId: BuyerId,
+  period: PeriodId,
+  refresh: boolean,
+): Promise<ReportPayload> {
   const apiKey = process.env.REDTRACK_API_KEY;
   if (!apiKey) {
     throw new ReportError(
@@ -114,24 +155,38 @@ export async function getReport(buyerId: BuyerId, refresh: boolean): Promise<Rep
   const today = mexicoToday();
   const from = addDays(today, -(LOOKBACK_DAYS - 1));
   const to = today;
-  const cacheKey = `${buyerId}:${from}:${to}`;
-  const cache = cacheStore();
+  const range = periodRange(today, period);
+  const rows = await loadRows(apiKey, buyerId, from, to, refresh);
+  const creatives = groupRows(rows);
+  const events = await loadEvents(apiKey, from, to, refresh);
+  const cohortMode: CohortMode = events ? "full" : "proxy";
+  const cohorts = events
+    ? buildCohorts(
+        events,
+        creatives.map((creative) => ({
+          adId: creative.adId,
+          d1: creative.days.find((day) => day.cost > 0)?.date ?? null,
+        })),
+        range,
+      )
+    : null;
 
-  if (!refresh) {
-    const hit = cache.get(cacheKey);
-    if (hit && hit.expires > Date.now()) return hit.value;
+  const cohortRecord: ReportPayload["cohorts"] = {};
+  if (cohorts) {
+    for (const [adId, stats] of cohorts) cohortRecord[adId] = stats;
   }
 
-  const rows = await fetchAllPages(apiKey, from, to, campaignIdFor(buyerId), refresh);
-  const payload: ReportPayload = {
+  return {
     ok: true,
     fetchedAt: new Date().toISOString(),
     today,
     from,
     to,
+    periodFrom: range.from,
+    periodTo: range.to,
     buyer: buyerId,
-    creatives: groupRows(rows),
+    cohortMode,
+    creatives,
+    cohorts: cohortRecord,
   };
-  cache.set(cacheKey, { expires: Date.now() + CACHE_TTL_MS, value: payload });
-  return payload;
 }

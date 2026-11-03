@@ -1,6 +1,6 @@
 import { DEFAULT_THRESHOLDS, sanitizeThresholds, type Thresholds } from "./config";
 
-const STORAGE_KEY = "lootea.criteria.v1";
+const STORAGE_KEY = "lootea.criteria.v2";
 
 export function readStoredThresholds(): Thresholds {
   if (typeof window === "undefined") return { ...DEFAULT_THRESHOLDS };

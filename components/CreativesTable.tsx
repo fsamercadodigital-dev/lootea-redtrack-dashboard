@@ -1,23 +1,24 @@
 "use client";
 
 import type { Verdict } from "@/lib/decision";
-import { formatCount, formatDay, formatRoas, formatUsd } from "@/lib/format";
+import { formatCount, formatDay, formatPercent, formatRoas, formatUsd } from "@/lib/format";
 import type { CreativeRow } from "@/lib/metrics";
 
 export type SortKey =
-  | "action"
   | "name"
   | "day"
   | "spend"
+  | "signups"
   | "ftds"
   | "cpaFtd"
-  | "roas"
-  | "roasD1"
-  | "roasThroughD4"
+  | "cohortRoas"
+  | "rpr"
+  | "topCustomerShare"
+  | "legacyShare"
+  | "action"
   | "redeposits"
   | "aov"
   | "cps"
-  | "signups"
   | "clicks";
 
 export type SortDir = "asc" | "desc";
@@ -33,12 +34,14 @@ const VERDICT_LABEL: Record<Verdict, string> = {
   escalar: "Escalar",
   manter: "Manter",
   descartar: "Descartar",
+  "sem-veredito": "Sem veredito",
 };
 
 const ACTION_ORDER: Record<Verdict, number> = {
   escalar: 0,
   manter: 1,
   descartar: 2,
+  "sem-veredito": 3,
 };
 
 type Column = {
@@ -51,31 +54,20 @@ type Column = {
 };
 
 const COLUMNS: Column[] = [
-  { key: "action", label: "Ação", title: "Decisão e motivo", align: "left" },
   { key: "name", label: "Criativo", title: "Nome mais recente e ID do anúncio", align: "left" },
-  { key: "day", label: "Dia", title: "Idade até hoje, a partir do primeiro dia com cliques ou custo", align: "right" },
+  { key: "day", label: "Dia", title: "Dia 0 é o primeiro dia com gasto", align: "right" },
   { key: "spend", label: "Gasto", title: "Custo no período", align: "right" },
-  { key: "ftds", label: "FTDs", title: "Primeiros depósitos no período", align: "right" },
+  { key: "signups", label: "Registros", title: "Cadastros no período", align: "right" },
+  { key: "ftds", label: "FTD", title: "Primeiros depósitos no período", align: "right" },
   { key: "cpaFtd", label: "CPA FTD", title: "Gasto ÷ FTDs", align: "right" },
-  { key: "roas", label: "ROAS", title: "Receita de depósitos ÷ gasto, no período", align: "right" },
-  { key: "roasD1", label: "ROAS D1", title: "ROAS só do primeiro dia com cliques ou custo", align: "right" },
-  {
-    key: "roasThroughD4",
-    label: "ROAS até D4",
-    title: "Receita e gasto acumulados do D1 ao D4",
-    align: "right",
-  },
-  {
-    key: "redeposits",
-    label: "Redeposits",
-    title: "Depósitos que não são o primeiro",
-    align: "right",
-    secondary: true,
-    split: true,
-  },
+  { key: "cohortRoas", label: "ROAS cohort", title: "Receita da coorte ÷ gasto. Sem coorte, usa o Ad Tracking", align: "right" },
+  { key: "rpr", label: "RPR", title: "Percentual de FTDs com redeposit", align: "right" },
+  { key: "topCustomerShare", label: "Top cliente", title: "Maior cliente ÷ receita da coorte", align: "right" },
+  { key: "legacyShare", label: "Legacy", title: "Receita do anúncio vinda de usuários de outra coorte", align: "right" },
+  { key: "action", label: "Ação", title: "Decisão, motivo e alertas", align: "left" },
+  { key: "redeposits", label: "Redeposits", title: "Depósitos que não são o primeiro", align: "right", secondary: true, split: true },
   { key: "aov", label: "AOV", title: "Receita de depósitos ÷ depósitos", align: "right", secondary: true },
   { key: "cps", label: "CPS", title: "Gasto ÷ cadastros", align: "right", secondary: true },
-  { key: "signups", label: "Cadastros", title: "Cadastros no período", align: "right", secondary: true },
   { key: "clicks", label: "Cliques", title: "Cliques no período", align: "right", secondary: true },
 ];
 
@@ -94,24 +86,26 @@ function readNumber(row: CreativeRow, key: SortKey): number | null {
       return row.day;
     case "spend":
       return row.spend;
+    case "signups":
+      return row.signups;
     case "ftds":
       return row.ftds;
     case "cpaFtd":
       return row.cpaFtd;
-    case "roas":
-      return row.roas;
-    case "roasD1":
-      return row.roasD1;
-    case "roasThroughD4":
-      return row.roasThroughD4;
+    case "cohortRoas":
+      return row.cohortRoas;
+    case "rpr":
+      return row.rpr;
+    case "topCustomerShare":
+      return row.topCustomerShare;
+    case "legacyShare":
+      return row.legacyShare;
     case "redeposits":
       return row.redeposits;
     case "aov":
       return row.aov;
     case "cps":
       return row.cps;
-    case "signups":
-      return row.signups;
     case "clicks":
       return row.clicks;
     default:
@@ -137,10 +131,6 @@ export function sortCreatives(rows: CreativeRow[], key: SortKey, dir: SortDir): 
   });
 }
 
-function money(value: number | null): string {
-  return formatUsd(value);
-}
-
 export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props) {
   const sorted = sortCreatives(rows, sortKey, sortDir);
 
@@ -159,12 +149,7 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
                   aria-sort={ariaSort}
                   className={`${column.align === "left" ? "left" : "num"}${column.secondary ? " secondary" : ""}${column.split ? " split" : ""}`}
                 >
-                  <button
-                    type="button"
-                    className="sort"
-                    title={column.title}
-                    onClick={() => onSort(column.key)}
-                  >
+                  <button type="button" className="sort" title={column.title} onClick={() => onSort(column.key)}>
                     {column.label}
                     {active ? <span aria-hidden="true">{sortDir === "asc" ? " ↑" : " ↓"}</span> : null}
                   </button>
@@ -177,30 +162,38 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
           {sorted.map((row) => (
             <tr key={row.adId} data-verdict={row.decision.verdict}>
               <td className="left">
-                <div className="action">
-                  <span className={`badge ${row.decision.verdict}`}>{VERDICT_LABEL[row.decision.verdict]}</span>
-                  <span className="motivo">{row.decision.motivo}</span>
-                </div>
-              </td>
-              <td className="left">
                 <div className="creative">
                   <span className="creative-name">{row.name}</span>
                   {row.name !== row.adId ? <span className="ad-id">{row.adId}</span> : null}
                 </div>
               </td>
               <td className="num">{formatDay(row.day)}</td>
-              <td className="num" title={`Maior gasto em um dia: ${formatUsd(row.maxDailySpend)}`}>
-                {money(row.spend)}
-              </td>
+              <td className="num">{formatUsd(row.spend)}</td>
+              <td className="num">{formatCount(row.signups)}</td>
               <td className="num">{formatCount(row.ftds)}</td>
-              <td className="num">{money(row.cpaFtd)}</td>
-              <td className="num">{formatRoas(row.roas)}</td>
-              <td className="num">{formatRoas(row.roasD1)}</td>
-              <td className="num">{formatRoas(row.roasThroughD4)}</td>
+              <td className="num">{formatUsd(row.cpaFtd)}</td>
+              <td className="num">{formatRoas(row.cohortRoas)}</td>
+              <td className="num">{formatPercent(row.rpr)}</td>
+              <td className="num">{formatPercent(row.topCustomerShare)}</td>
+              <td className="num">{formatPercent(row.legacyShare)}</td>
+              <td className="left">
+                <div className="action">
+                  <span className={`badge ${row.decision.verdict}`}>{VERDICT_LABEL[row.decision.verdict]}</span>
+                  <span className="motivo">{row.decision.motivo}</span>
+                  {row.decision.alerts.length > 0 ? (
+                    <span className="tags">
+                      {row.decision.alerts.map((alert) => (
+                        <span key={alert} className="tag">
+                          {alert}
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
+                </div>
+              </td>
               <td className="num secondary split">{formatCount(row.redeposits)}</td>
-              <td className="num secondary">{money(row.aov)}</td>
-              <td className="num secondary">{money(row.cps)}</td>
-              <td className="num secondary">{formatCount(row.signups)}</td>
+              <td className="num secondary">{formatUsd(row.aov)}</td>
+              <td className="num secondary">{formatUsd(row.cps)}</td>
               <td className="num secondary">{formatCount(row.clicks)}</td>
             </tr>
           ))}

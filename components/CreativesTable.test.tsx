@@ -6,21 +6,25 @@ import type { CreativeRow } from "../lib/metrics";
 
 function row(partial: Pick<CreativeRow, "adId" | "name" | "spend"> & Partial<CreativeRow>): CreativeRow {
   return {
+    adset: "[E] 01/11",
+    tracked: true,
     day: 2,
+    signups: 3,
+    deposits: 1,
     ftds: 1,
     cpaFtd: 8,
-    roas: 1.5,
-    roasD1: 1.5,
-    roasThroughD4: 1.2,
+    adRoas: 1.5,
+    cohortRevenue: 12,
+    cohortRoas: 1.5,
+    rpr: 0,
+    topCustomerShare: null,
+    legacyShare: null,
     redeposits: 0,
     aov: 20,
     cps: 4,
-    signups: 3,
     clicks: 10,
     depositRevenue: 12,
-    maxDailySpend: partial.spend,
-    scaleRoas: null,
-    decision: { verdict: "manter", motivo: "janela de teste, volume baixo" },
+    decision: { verdict: "manter", motivo: "não mexer, não subir budget", alerts: [] },
     ...partial,
   };
 }
@@ -30,13 +34,13 @@ const rows = [
     adId: "111",
     name: "Criativo caro",
     spend: 40,
-    decision: { verdict: "descartar", motivo: "CPA FTD acima do limite" },
+    decision: { verdict: "descartar", motivo: "ROAS cohort abaixo de 0.8", alerts: [] },
   }),
   row({
     adId: "222",
     name: "LT-RIFA-001",
     spend: 12,
-    decision: { verdict: "escalar", motivo: "CPA FTD abaixo do limite, ROAS D1 no alvo, mais FTDs do que redeposits" },
+    decision: { verdict: "escalar", motivo: "Super Winner – Surf Scaling hoje", alerts: ["amostra pequena, não escalar"] },
   }),
 ];
 
@@ -46,7 +50,8 @@ test("a tabela mostra o crachá, o motivo, o nome e o id", () => {
   );
   assert.match(html, /Escalar/);
   assert.match(html, /Descartar/);
-  assert.match(html, /CPA FTD acima do limite/);
+  assert.match(html, /ROAS cohort abaixo de 0.8/);
+  assert.match(html, /amostra pequena, não escalar/);
   assert.match(html, /LT-RIFA-001/);
   assert.match(html, /222/);
   assert.match(html, />D2</);

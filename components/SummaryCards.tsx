@@ -16,6 +16,7 @@ const VERDICTS: { id: Verdict; label: string }[] = [
   { id: "escalar", label: "Escalar" },
   { id: "manter", label: "Manter" },
   { id: "descartar", label: "Descartar" },
+  { id: "sem-veredito", label: "Sem veredito" },
 ];
 
 export default function SummaryCards({ summary, action, onAction }: Props) {
@@ -30,12 +31,16 @@ export default function SummaryCards({ summary, action, onAction }: Props) {
         <strong>{formatCount(summary.ftds)}</strong>
       </article>
       <article className="card">
-        <p>CPA FTD</p>
+        <p>CPA médio</p>
         <strong>{formatUsd(summary.cpaFtd)}</strong>
       </article>
       <article className="card">
-        <p>ROAS</p>
-        <strong>{formatRoas(summary.roas)}</strong>
+        <p>ROAS cohort</p>
+        <strong>{formatRoas(summary.cohortRoas)}</strong>
+      </article>
+      <article className="card">
+        <p>Barra</p>
+        <strong>{formatRoas(summary.scaleBar)}</strong>
       </article>
       {VERDICTS.map((verdict) => {
         const selected = action === verdict.id;
@@ -48,7 +53,7 @@ export default function SummaryCards({ summary, action, onAction }: Props) {
             onClick={() => onAction(selected ? "todas" : verdict.id)}
           >
             <p>{verdict.label}</p>
-            <strong>{summary[verdict.id]}</strong>
+            <strong>{summary[verdict.id === "sem-veredito" ? "semVeredito" : verdict.id]}</strong>
           </button>
         );
       })}

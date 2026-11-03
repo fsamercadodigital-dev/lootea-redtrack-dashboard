@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isBuyerId } from "@/lib/config";
+import { isPeriodId } from "@/lib/dates";
 import { getReport, ReportError } from "@/lib/redtrack";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   const buyerParam = request.nextUrl.searchParams.get("buyer") ?? "all";
@@ -14,10 +16,18 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const periodParam = request.nextUrl.searchParams.get("period") ?? "7";
+  if (!isPeriodId(periodParam)) {
+    return NextResponse.json(
+      { ok: false, stage: "parâmetros", status: 400, message: "Período desconhecido." },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   const refresh = request.nextUrl.searchParams.get("refresh") === "1";
 
   try {
-    const report = await getReport(buyerParam, refresh);
+    const report = await getReport(buyerParam, periodParam, refresh);
     return NextResponse.json(report, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof ReportError) {

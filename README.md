@@ -48,33 +48,25 @@ A chave do criativo é `rt_ad_id`. O mesmo anúncio pode repetir no dia quando o
 
 Os cartões somam a conta do período (gasto total ÷ FTDs totais). Não é a média do ROAS de cada linha.
 
-### Idade, ROAS D1, ROAS até D4 e escala
-
-O D1 é o primeiro dia, **dentro de 30 dias**, com custo ou cliques. O número do dia é quantos dias se passaram desde essa data até hoje na Cidade do México, mais 1. Um criativo mais velho que a janela aparece mais novo do que é.
-
-**ROAS D1** usa só esse primeiro dia.
-
-**ROAS até D4** é o acumulado do D1 ao D4: receita de depósitos desses dias ÷ custo desses dias. Não é o ROAS só dos dias 3 e 4. Se o criativo ainda não chegou no D4, entra o que já teve.
-
-A escala olha os 30 dias: maior gasto de um dia (passe o mouse no gasto) e ROAS dos dias em que o gasto passou do valor em Critérios.
+O dia 0 é o primeiro dia, dentro de 30 dias, com custo. A idade é quantos dias se passaram desde essa data até hoje na Cidade do México. Criativo mais velho que a janela aparece mais novo do que é.
 
 O custo por anúncio é aproximado, porque o RedTrack ainda reparte o custo do conjunto.
 
+## Coorte
+
+O usuário (`external_id`) fica no anúncio do primeiro FTD (`type4`, `sub1` / `rt_ad_id`). Todos os depósitos dele (`type2`), em qualquer anúncio ou no orgânico, entram na receita dessa coorte no período. RPR é a parcela desses usuários com um `type7` ou um segundo depósito. Legacy é a parcela da receita de Ad Tracking do anúncio que veio de usuário cujo primeiro FTD é de outro anúncio ou anterior ao dia 0.
+
+Se o log de conversões não trouxer isso, o painel avisa `cohort indisponível – usando Ad Tracking` e usa `revenuetype2 ÷ gasto`. Nesse caso o RPR vira 100% se houve redeposit e 0% se não houve.
+
 ## Decisão
 
-Os padrões estão em `lib/config.ts`. Em **Critérios** dá para mudar, e o navegador guarda. Campo opcional vazio = **não configurado**, e esse critério fica de fora.
+Só entra na conta o conjunto cujo nome começa com `[E]`, `[F]` ou `[D]` e uma data. O resto fica **Sem veredito**. Os padrões estão em `lib/config.ts` e podem ser mudados em Critérios.
 
-Ordem, em `lib/decision.ts`:
+1. Dia 0: descartar com gasto ≥ $10 sem cadastro, ou ≥ $15 sem depósito. Super Winner (ROAS de depósito > 2, FTD ≥ 15 e CPA ≤ $7,50) escala na hora.
+2. Dias 1 e 2: manter. Não descartar por um dia ruim.
+3. Até a véspera do dia 7: manter. Descartar só se o CPA for ≥ 2× a média dos anúncios com tracking e não houver redeposit.
+4. Do dia 7 em diante: escalar em CBO se o ROAS cohort for ≥ média × 1,2, com FTD ≥ 15, RPR ≥ 25% e top cliente ≤ 50%. Descartar se o ROAS cohort for < 0,8. Senão, manter em ABO.
 
-1. **Descartar** se o CPA FTD passa do limite com pelo menos 1 FTD, ou o gasto sem FTD passa de 2× o limite, ou há mais redeposits que FTDs, ou o CPS passa do limite (quando configurado).
-2. **Escalar** se o CPA FTD fica abaixo do limite, e (ROAS D1 ou o acumulado até D4 atinge o mínimo), e há mais FTDs que redeposits, e o AOV passa se estiver configurado, e o ROAS dos dias caros passa se o gasto de escala estiver configurado.
-3. **Manter** se o dia ainda está na janela e não caiu nos casos acima. Com FTDs abaixo do mínimo, o motivo é `janela de teste, volume baixo`.
-4. Senão, **descartar**: `não atingiu critérios até o D3`.
-
-Exemplos com o padrão (CPA máximo $10, ROAS D1 1,40, ROAS até D4 2, avaliar até o D3):
-
-- D2, gasto $40, 5 FTDs (CPA $8), ROAS D1 1,50, 1 redeposit → Escalar.
-- D1, gasto $20,01 e nenhum FTD → Descartar. Gasto de $20,00 no D1 → Manter.
-- D4 sem fechar a escala → Descartar por prazo. Se a escala fecha, ainda pode Escalar depois do D3.
+Alertas (não mudam a ação): baleia acima de 50% da receita, menos de 15 FTDs, legacy acima de 40%. A média e a barra dos cartões ignoram anúncios sem tracking.
 
 `npm test` confere essas contas. `npx tsc --noEmit` e `npm run build` conferem o projeto.

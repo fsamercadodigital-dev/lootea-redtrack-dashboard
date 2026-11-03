@@ -6,7 +6,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --tsconfig tsconfig.tests.json --test lib/decision.test.ts lib/metrics.test.ts components/CreativesTable.test.tsx"
+    "test": "tsx --tsconfig tsconfig.tests.json --test lib/decision.test.ts lib/cohort.test.ts lib/metrics.test.ts components/CreativesTable.test.tsx"
   },
   "dependencies": {
     "next": "^16.4.4",

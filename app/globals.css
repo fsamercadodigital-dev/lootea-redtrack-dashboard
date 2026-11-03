@@ -226,7 +226,7 @@ footer,
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
   margin-top: 12px;
 }
@@ -266,6 +266,10 @@ footer,
 
 .card-action.descartar strong {
   color: var(--red);
+}
+
+.card-action.sem-veredito strong {
+  color: #5c5c66;
 }
 
 .card-action.selected {
@@ -416,6 +420,10 @@ tr[data-verdict="descartar"] td:first-child {
   box-shadow: inset 3px 0 0 var(--red);
 }
 
+tr[data-verdict="sem-veredito"] td:first-child {
+  box-shadow: inset 3px 0 0 #b8b8c2;
+}
+
 .num {
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -479,6 +487,27 @@ th.left {
   color: var(--red);
 }
 
+.badge.sem-veredito {
+  background: #f1f1f4;
+  color: #5c5c66;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 1px 6px;
+  background: #f4f0ff;
+  color: var(--purple-dark);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 footer {
   margin-top: 18px;
   font-size: 13px;
@@ -498,7 +527,7 @@ footer {
 
 @media (max-width: 1100px) {
   .cards {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 }
 

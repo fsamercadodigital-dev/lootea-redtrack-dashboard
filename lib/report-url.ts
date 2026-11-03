@@ -3,6 +3,7 @@ import { PAGE_SIZE, REDTRACK_SOURCE_ID } from "./config";
 const FIELDS = [
   "rt_ad_id",
   "rt_ad",
+  "rt_adgroup",
   "date",
   "clicks",
   "cost",
@@ -27,7 +28,7 @@ export function buildReportUrl(options: {
 }): URL {
   const url = new URL("https://api.redtrack.io/report/v2");
   url.searchParams.set("api_key", options.apiKey);
-  url.searchParams.set("group", "rt_ad_id,rt_ad,date");
+  url.searchParams.set("group", "rt_ad_id,rt_ad,rt_adgroup,date");
   url.searchParams.set("date_from", options.from);
   url.searchParams.set("date_to", options.to);
   url.searchParams.set("timezone", "America/Mexico_City");

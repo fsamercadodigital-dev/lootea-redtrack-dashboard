@@ -105,14 +105,12 @@ test("soma o mesmo anúncio no mesmo dia e fica com o nome mais recente", () => 
   );
   const row = built.find((item) => item.adId === "120");
   assert.ok(row);
-  assert.equal(row.day, 4);
+  assert.equal(row.day, 3);
   assert.equal(row.spend, 50);
   assert.equal(row.ftds, 3);
-  assert.equal(row.roasD1, 0.6);
-  assert.equal(row.roasThroughD4, 1.2);
-  assert.equal(row.maxDailySpend, 50);
-  assert.equal(row.decision.verdict, "descartar");
-  assert.equal(row.decision.motivo, "CPA FTD acima do limite");
+  assert.equal(row.tracked, false);
+  assert.equal(row.decision.verdict, "sem-veredito");
+  assert.equal(row.decision.motivo, "sem tracking completo");
 
   const other = built.find((item) => item.adId === "999");
   assert.equal(other, undefined);
@@ -123,6 +121,7 @@ test("o período não mistura dias de fora, e a idade usa o histórico", () => {
     {
       rt_ad_id: "1",
       rt_ad: "A",
+      rt_adgroup: "[E] 28/10",
       date: "2026-10-28",
       clicks: 10,
       cost: 20,
@@ -162,17 +161,15 @@ test("o período não mistura dias de fora, e a idade usa o histórico", () => {
     grouped,
     { from: "2026-10-29", to: "2026-10-29" },
     "2026-11-02",
-    { ...DEFAULT_THRESHOLDS, scaleSpendThreshold: 15 },
+    DEFAULT_THRESHOLDS,
   );
   assert.ok(row);
   assert.equal(row.spend, 18);
   assert.equal(row.ftds, 2);
   assert.equal(row.cpaFtd, 9);
-  assert.equal(row.day, 6);
-  assert.equal(row.roasD1, 0.5);
-  assert.ok(row.roasThroughD4 != null && Math.abs(row.roasThroughD4 - 90 / 38) < 1e-9);
-  assert.ok(row.scaleRoas != null && Math.abs(row.scaleRoas - 390 / 138) < 1e-9);
-  assert.equal(row.decision.verdict, "escalar");
+  assert.equal(row.day, 5);
+  assert.equal(row.tracked, true);
+  assert.equal(row.decision.verdict, "manter");
 });
 
 test("criativo sem clique e sem custo não ganha D1", () => {
@@ -197,8 +194,8 @@ test("criativo sem clique e sem custo não ganha D1", () => {
     DEFAULT_THRESHOLDS,
   );
   assert.equal(row.day, null);
-  assert.equal(row.roasD1, null);
-  assert.equal(row.decision.motivo, "mais redeposits do que FTDs");
+  assert.equal(row.decision.verdict, "sem-veredito");
+  assert.equal(row.decision.motivo, "sem tracking completo");
 });
 
 test("resumo soma a conta e não a média dos ROAS", () => {
@@ -234,12 +231,12 @@ test("resumo soma a conta e não a média dos ROAS", () => {
     "2026-11-03",
     DEFAULT_THRESHOLDS,
   );
-  const summary = summarize(rows);
-  assert.equal(summary.spend, 100);
-  assert.equal(summary.ftds, 5);
-  assert.equal(summary.cpaFtd, 20);
-  assert.equal(summary.roas, 1.1);
-  assert.equal(summary.escalar + summary.manter + summary.descartar, 2);
+  const summary = summarize(rows, DEFAULT_THRESHOLDS);
+  assert.equal(summary.spend, 0);
+  assert.equal(summary.ftds, 0);
+  assert.equal(summary.cpaFtd, null);
+  assert.equal(summary.cohortRoas, null);
+  assert.equal(summary.semVeredito, 2);
 });
 
 test("datas de período e fuso da Cidade do México", () => {
@@ -293,7 +290,7 @@ test("a URL pede o relatório v2 e não os campos prontos de ROAS", () => {
   assert.equal(all.origin, "https://api.redtrack.io");
   assert.equal(all.pathname, "/report/v2");
   assert.equal(all.searchParams.get("api_key"), "test-key");
-  assert.equal(all.searchParams.get("group"), "rt_ad_id,rt_ad,date");
+  assert.equal(all.searchParams.get("group"), "rt_ad_id,rt_ad,rt_adgroup,date");
   assert.equal(all.searchParams.get("source_id"), "6ad59d1d78b93e5c029c71fe");
   assert.equal(all.searchParams.get("campaign_id"), null);
   assert.equal(all.searchParams.get("timezone"), "America/Mexico_City");
@@ -315,22 +312,16 @@ test("a URL pede o relatório v2 e não os campos prontos de ROAS", () => {
   assert.equal(felipe.searchParams.get("campaign_id"), "6adae4745021de703da2318f");
 });
 
-test("critérios inválidos voltam para o padrão e o vazio desliga o opcional", () => {
+test("critérios inválidos voltam para o padrão", () => {
   const cleaned = sanitizeThresholds({
-    cpaFtdMax: -5,
-    roasD1Min: "1.8",
-    aovMin: "",
-    cpsMax: "4",
-    scaleSpendThreshold: null,
-    maxEvaluationDay: 4.8,
-    minFtdsForSignal: -2,
+    dia0SpendNoReg: -5,
+    superWinnerRoas: "2.5",
+    scaleDay: 8.9,
+    checkpointRpr: "30",
   });
-  assert.equal(cleaned.cpaFtdMax, DEFAULT_THRESHOLDS.cpaFtdMax);
-  assert.equal(cleaned.roasD1Min, 1.8);
-  assert.equal(cleaned.aovMin, null);
-  assert.equal(cleaned.cpsMax, 4);
-  assert.equal(cleaned.scaleSpendThreshold, null);
-  assert.equal(cleaned.maxEvaluationDay, 4);
-  assert.equal(cleaned.minFtdsForSignal, DEFAULT_THRESHOLDS.minFtdsForSignal);
-  assert.equal(cleaned.roasD3Min, DEFAULT_THRESHOLDS.roasD3Min);
+  assert.equal(cleaned.dia0SpendNoReg, DEFAULT_THRESHOLDS.dia0SpendNoReg);
+  assert.equal(cleaned.superWinnerRoas, 2.5);
+  assert.equal(cleaned.scaleDay, 8);
+  assert.equal(cleaned.checkpointRpr, 30);
+  assert.equal(cleaned.discardCohort, DEFAULT_THRESHOLDS.discardCohort);
 });

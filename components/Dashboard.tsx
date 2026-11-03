@@ -5,7 +5,7 @@ import { fetchReport, ClientReportError } from "@/lib/client-report";
 import { BUYERS, DEFAULT_THRESHOLDS, type BuyerId, type Thresholds } from "@/lib/config";
 import { formatShortDate, PERIODS, periodRange, formatStamp, type PeriodId } from "@/lib/dates";
 import type { Verdict } from "@/lib/decision";
-import { rowsForPeriod, summarize } from "@/lib/metrics";
+import { buildCreativeRows, summarize } from "@/lib/metrics";
 import { readStoredThresholds, storeThresholds } from "@/lib/settings";
 import type { ReportFailure, ReportPayload } from "@/lib/types";
 import CreativesTable, { type SortDir, type SortKey } from "./CreativesTable";
@@ -41,14 +41,14 @@ export default function Dashboard() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const requestRef = useRef<AbortController | null>(null);
 
-  const load = useCallback((nextBuyer: BuyerId, refresh: boolean) => {
+  const load = useCallback((nextBuyer: BuyerId, nextPeriod: PeriodId, refresh: boolean) => {
     requestRef.current?.abort();
     const controller = new AbortController();
     requestRef.current = controller;
     setLoading(true);
     setError(null);
 
-    fetchReport(nextBuyer, refresh, controller.signal)
+    fetchReport(nextBuyer, nextPeriod, refresh, controller.signal)
       .then((payload) => {
         if (controller.signal.aborted) return;
         setReport(payload);
@@ -73,16 +73,24 @@ export default function Dashboard() {
   }, [settingsReady, thresholds]);
 
   useEffect(() => {
-    load(buyer, false);
+    load(buyer, period, false);
     return () => requestRef.current?.abort();
-  }, [buyer, load]);
+  }, [buyer, period, load]);
 
   const rows = useMemo(() => {
     if (!report) return [];
-    return rowsForPeriod(report.creatives, report.today, period, thresholds);
-  }, [report, period, thresholds]);
+    const cohorts =
+      report.cohortMode === "full" ? new Map(Object.entries(report.cohorts)) : null;
+    return buildCreativeRows(
+      report.creatives,
+      { from: report.periodFrom, to: report.periodTo },
+      report.today,
+      thresholds,
+      cohorts,
+    );
+  }, [report, thresholds]);
 
-  const summary = useMemo(() => summarize(rows), [rows]);
+  const summary = useMemo(() => summarize(rows, thresholds), [rows, thresholds]);
 
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -117,7 +125,7 @@ export default function Dashboard() {
             <p className="subtitle">Decisão por primeiro depósito</p>
           </div>
         </div>
-        <button type="button" className="primary" onClick={() => load(buyer, true)} disabled={loading}>
+        <button type="button" className="primary" onClick={() => load(buyer, period, true)} disabled={loading}>
           {loading ? "Atualizando…" : "Atualizar"}
         </button>
       </header>
@@ -196,7 +204,15 @@ export default function Dashboard() {
           />
         </label>
         <div className="chips" role="group" aria-label="Filtrar por ação">
-          {(["todas", "escalar", "manter", "descartar"] as const).map((item) => (
+          {(
+            [
+              ["todas", "Todas"],
+              ["escalar", "Escalar"],
+              ["manter", "Manter"],
+              ["descartar", "Descartar"],
+              ["sem-veredito", "Sem veredito"],
+            ] as const
+          ).map(([item, label]) => (
             <button
               key={item}
               type="button"
@@ -204,7 +220,7 @@ export default function Dashboard() {
               aria-pressed={action === item}
               onClick={() => setAction(item)}
             >
-              {item === "todas" ? "Todas" : item === "escalar" ? "Escalar" : item === "manter" ? "Manter" : "Descartar"}
+              {label}
             </button>
           ))}
         </div>
@@ -220,11 +236,17 @@ export default function Dashboard() {
 
       {settingsOpen ? <SettingsPanel thresholds={thresholds} onChange={setThresholds} /> : null}
 
+      {report?.cohortMode === "proxy" ? (
+        <div className="banner error" role="status">
+          <strong>cohort indisponível – usando Ad Tracking</strong>
+        </div>
+      ) : null}
+
       {report ? (
         <p className="note">
-          Gasto, FTDs, CPA, ROAS, redeposits, AOV, CPS, cadastros e cliques usam o período escolhido. O dia
-          conta até hoje na Cidade do México, a partir do primeiro dia com cliques ou custo nos últimos 30
-          dias. ROAS até D4 é o acumulado do D1 ao D4.
+          Dia 0 é o primeiro dia com gasto, contado até hoje na Cidade do México. Gasto, registros e FTDs são
+          do período. Os cartões de média usam só anúncios com conjunto [E], [F] ou [D] mais data. Os demais
+          ficam sem veredito.
         </p>
       ) : null}
 

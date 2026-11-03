@@ -30,3 +30,12 @@ export function formatDay(day: number | null): string {
   if (day == null) return "—";
   return `D${day}`;
 }
+
+export function formatPercent(value: number | null): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  if (!Number.isFinite(value)) return "∞";
+  return `${(value * 100).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  })}%`;
+}

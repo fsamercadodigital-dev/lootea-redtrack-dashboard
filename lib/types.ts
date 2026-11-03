@@ -12,8 +12,11 @@ export type DailyPoint = {
 export type CreativeSeries = {
   adId: string;
   name: string;
+  adset: string;
   days: DailyPoint[];
 };
+
+export type CohortMode = "full" | "proxy";
 
 export type ReportPayload = {
   ok: true;
@@ -21,8 +24,12 @@ export type ReportPayload = {
   today: string;
   from: string;
   to: string;
+  periodFrom: string;
+  periodTo: string;
   buyer: string;
+  cohortMode: CohortMode;
   creatives: CreativeSeries[];
+  cohorts: Record<string, { revenue: number; rpr: number | null; topCustomerShare: number | null; legacyShare: number | null }>;
 };
 
 export type ReportFailure = {

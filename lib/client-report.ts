@@ -1,4 +1,5 @@
 import type { BuyerId } from "./config";
+import type { PeriodId } from "./dates";
 import type { ReportFailure, ReportPayload } from "./types";
 
 export class ClientReportError extends Error {
@@ -30,10 +31,11 @@ function isFailure(value: unknown): value is ReportFailure {
 
 export async function fetchReport(
   buyer: BuyerId,
+  period: PeriodId,
   refresh: boolean,
   signal: AbortSignal,
 ): Promise<ReportPayload> {
-  const params = new URLSearchParams({ buyer });
+  const params = new URLSearchParams({ buyer, period });
   if (refresh) params.set("refresh", "1");
 
   let response: Response;

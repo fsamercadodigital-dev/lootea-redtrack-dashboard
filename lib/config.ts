@@ -1,29 +1,51 @@
 /**
- * Limites padrão da decisão. O painel deixa editar e guarda no navegador.
- * Valores em USD. null = critério desligado ("não configurado").
+ * Limites da SOP. O painel deixa editar e guarda no navegador.
+ * Dinheiro em USD. RPR, top cliente, baleia e legacy estão em porcentagem (20 = 20%).
  */
 export type Thresholds = {
-  cpaFtdMax: number;
-  roasD1Min: number;
-  roasD3Min: number;
-  aovMin: number | null;
-  cpsMax: number | null;
-  scaleSpendThreshold: number | null;
-  scaleRoasMin: number;
-  maxEvaluationDay: number;
-  minFtdsForSignal: number;
+  dia0SpendNoReg: number;
+  dia0SpendNoDeposit: number;
+  superWinnerRoas: number;
+  superWinnerFtd: number;
+  superWinnerCpa: number;
+  earlyDayEnd: number;
+  checkpointFtd: number;
+  checkpointRpr: number;
+  checkpointCohort: number;
+  suspectCohort: number;
+  cpaMultiple: number;
+  scaleDay: number;
+  scaleBarMultiple: number;
+  scaleFtd: number;
+  scaleRpr: number;
+  scaleTopMax: number;
+  discardCohort: number;
+  whaleShare: number;
+  smallSampleFtd: number;
+  legacyAlert: number;
 };
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
-  cpaFtdMax: 10,
-  roasD1Min: 1.4,
-  roasD3Min: 2,
-  aovMin: null,
-  cpsMax: null,
-  scaleSpendThreshold: null,
-  scaleRoasMin: 2,
-  maxEvaluationDay: 3,
-  minFtdsForSignal: 3,
+  dia0SpendNoReg: 10,
+  dia0SpendNoDeposit: 15,
+  superWinnerRoas: 2,
+  superWinnerFtd: 15,
+  superWinnerCpa: 7.5,
+  earlyDayEnd: 2,
+  checkpointFtd: 8,
+  checkpointRpr: 20,
+  checkpointCohort: 1.2,
+  suspectCohort: 0.6,
+  cpaMultiple: 2,
+  scaleDay: 7,
+  scaleBarMultiple: 1.2,
+  scaleFtd: 15,
+  scaleRpr: 25,
+  scaleTopMax: 50,
+  discardCohort: 0.8,
+  whaleShare: 50,
+  smallSampleFtd: 15,
+  legacyAlert: 40,
 };
 
 export const TIME_ZONE = "America/Mexico_City";
@@ -31,6 +53,8 @@ export const LOOKBACK_DAYS = 30;
 export const CACHE_TTL_MS = 10 * 60 * 1000;
 export const REDTRACK_SOURCE_ID = "6ad59d1d78b93e5c029c71fe";
 export const PAGE_SIZE = 1000;
+export const CONVERSION_PAGE_SIZE = 10000;
+export const CONVERSION_PAGE_CAP = 8;
 
 export const BUYERS = [
   { id: "all", label: "Todos Meta" },
@@ -51,13 +75,6 @@ function requiredNumber(value: unknown, fallback: number): number {
   return number;
 }
 
-function optionalNumber(value: unknown): number | null {
-  if (value == null || value === "") return null;
-  const number = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(number) || number < 0) return null;
-  return number;
-}
-
 function wholeNumber(value: unknown, fallback: number, min: number): number {
   const number = requiredNumber(value, fallback);
   return Math.max(min, Math.floor(number));
@@ -67,14 +84,25 @@ function wholeNumber(value: unknown, fallback: number, min: number): number {
 export function sanitizeThresholds(value: unknown): Thresholds {
   const raw = value && typeof value === "object" ? (value as Partial<Thresholds>) : {};
   return {
-    cpaFtdMax: requiredNumber(raw.cpaFtdMax, DEFAULT_THRESHOLDS.cpaFtdMax),
-    roasD1Min: requiredNumber(raw.roasD1Min, DEFAULT_THRESHOLDS.roasD1Min),
-    roasD3Min: requiredNumber(raw.roasD3Min, DEFAULT_THRESHOLDS.roasD3Min),
-    aovMin: optionalNumber(raw.aovMin),
-    cpsMax: optionalNumber(raw.cpsMax),
-    scaleSpendThreshold: optionalNumber(raw.scaleSpendThreshold),
-    scaleRoasMin: requiredNumber(raw.scaleRoasMin, DEFAULT_THRESHOLDS.scaleRoasMin),
-    maxEvaluationDay: wholeNumber(raw.maxEvaluationDay, DEFAULT_THRESHOLDS.maxEvaluationDay, 1),
-    minFtdsForSignal: wholeNumber(raw.minFtdsForSignal, DEFAULT_THRESHOLDS.minFtdsForSignal, 0),
+    dia0SpendNoReg: requiredNumber(raw.dia0SpendNoReg, DEFAULT_THRESHOLDS.dia0SpendNoReg),
+    dia0SpendNoDeposit: requiredNumber(raw.dia0SpendNoDeposit, DEFAULT_THRESHOLDS.dia0SpendNoDeposit),
+    superWinnerRoas: requiredNumber(raw.superWinnerRoas, DEFAULT_THRESHOLDS.superWinnerRoas),
+    superWinnerFtd: wholeNumber(raw.superWinnerFtd, DEFAULT_THRESHOLDS.superWinnerFtd, 0),
+    superWinnerCpa: requiredNumber(raw.superWinnerCpa, DEFAULT_THRESHOLDS.superWinnerCpa),
+    earlyDayEnd: wholeNumber(raw.earlyDayEnd, DEFAULT_THRESHOLDS.earlyDayEnd, 1),
+    checkpointFtd: wholeNumber(raw.checkpointFtd, DEFAULT_THRESHOLDS.checkpointFtd, 0),
+    checkpointRpr: requiredNumber(raw.checkpointRpr, DEFAULT_THRESHOLDS.checkpointRpr),
+    checkpointCohort: requiredNumber(raw.checkpointCohort, DEFAULT_THRESHOLDS.checkpointCohort),
+    suspectCohort: requiredNumber(raw.suspectCohort, DEFAULT_THRESHOLDS.suspectCohort),
+    cpaMultiple: requiredNumber(raw.cpaMultiple, DEFAULT_THRESHOLDS.cpaMultiple),
+    scaleDay: wholeNumber(raw.scaleDay, DEFAULT_THRESHOLDS.scaleDay, 1),
+    scaleBarMultiple: requiredNumber(raw.scaleBarMultiple, DEFAULT_THRESHOLDS.scaleBarMultiple),
+    scaleFtd: wholeNumber(raw.scaleFtd, DEFAULT_THRESHOLDS.scaleFtd, 0),
+    scaleRpr: requiredNumber(raw.scaleRpr, DEFAULT_THRESHOLDS.scaleRpr),
+    scaleTopMax: requiredNumber(raw.scaleTopMax, DEFAULT_THRESHOLDS.scaleTopMax),
+    discardCohort: requiredNumber(raw.discardCohort, DEFAULT_THRESHOLDS.discardCohort),
+    whaleShare: requiredNumber(raw.whaleShare, DEFAULT_THRESHOLDS.whaleShare),
+    smallSampleFtd: wholeNumber(raw.smallSampleFtd, DEFAULT_THRESHOLDS.smallSampleFtd, 0),
+    legacyAlert: requiredNumber(raw.legacyAlert, DEFAULT_THRESHOLDS.legacyAlert),
   };
 }
