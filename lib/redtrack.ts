@@ -190,6 +190,15 @@ export async function getReport(
     conversionTypes: loaded?.types ?? [],
     conversionRows: loaded?.rows ?? 0,
     conversionFtdFlags: loaded?.ftdFlags ?? 0,
+    conversionMatch: {
+      ftdEvents: loaded?.ftdEvents ?? 0,
+      ftdWithUser: loaded?.ftdWithUser ?? 0,
+      ftdWithAd: loaded?.ftdWithAd ?? 0,
+      ftdExternal: loaded?.ftdExternal ?? 0,
+      ftdClick: loaded?.ftdClick ?? 0,
+      depositWithUser: loaded?.depositWithUser ?? 0,
+      depositWithAd: loaded?.depositWithAd ?? 0,
+    },
     creatives,
     cohorts: cohortRecord,
   };

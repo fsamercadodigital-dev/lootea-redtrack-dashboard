@@ -31,6 +31,15 @@ export type ReportPayload = {
   conversionTypes: string[];
   conversionRows: number;
   conversionFtdFlags: number;
+  conversionMatch: {
+    ftdEvents: number;
+    ftdWithUser: number;
+    ftdWithAd: number;
+    ftdExternal: number;
+    ftdClick: number;
+    depositWithUser: number;
+    depositWithAd: number;
+  };
   creatives: CreativeSeries[];
   cohorts: Record<string, { revenue: number; rpr: number | null; topCustomerShare: number | null; legacyShare: number | null }>;
 };

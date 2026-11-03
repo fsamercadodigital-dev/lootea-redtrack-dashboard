@@ -59,6 +59,13 @@ export type ConversionLoad = {
   types: string[];
   rows: number;
   ftdFlags: number;
+  ftdEvents: number;
+  ftdWithUser: number;
+  ftdWithAd: number;
+  ftdExternal: number;
+  ftdClick: number;
+  depositWithUser: number;
+  depositWithAd: number;
 };
 
 function flagCount(value: unknown): boolean {
@@ -70,6 +77,8 @@ export async function loadConversionEvents(apiKey: string, from: string, to: str
   const types = new Set<string>();
   let rows = 0;
   let ftdFlags = 0;
+  let ftdExternal = 0;
+  let ftdClick = 0;
   try {
     for (let page = 1; page <= CONVERSION_PAGE_CAP; page += 1) {
       const items = await fetchPage(apiKey, from, to, page);
@@ -79,6 +88,11 @@ export async function loadConversionEvents(apiKey: string, from: string, to: str
           const record = item as Record<string, unknown>;
           if (record.type != null) types.add(String(record.type).slice(0, 40));
           if (flagCount(record.type4)) ftdFlags += 1;
+          const label = String(record.type ?? "").toLowerCase();
+          if (label === "ftd" || label === "type4") {
+            if (String(record.external_id ?? "").trim()) ftdExternal += 1;
+            if (String(record.clickid ?? "").trim()) ftdClick += 1;
+          }
         }
         events.push(...toConvEvents(item, eventDate));
       }
@@ -88,5 +102,19 @@ export async function loadConversionEvents(apiKey: string, from: string, to: str
     return null;
   }
   if (rows === 0) return null;
-  return { events, types: Array.from(types).sort(), rows, ftdFlags };
+  const ftdEvents = events.filter((event) => event.kind === "ftd");
+  const deposits = events.filter((event) => event.kind === "deposit");
+  return {
+    events,
+    types: Array.from(types).sort(),
+    rows,
+    ftdFlags,
+    ftdEvents: ftdEvents.length,
+    ftdWithUser: ftdEvents.filter((event) => event.userId).length,
+    ftdWithAd: ftdEvents.filter((event) => event.adId).length,
+    ftdExternal,
+    ftdClick,
+    depositWithUser: deposits.filter((event) => event.userId).length,
+    depositWithAd: deposits.filter((event) => event.adId).length,
+  };
 }
