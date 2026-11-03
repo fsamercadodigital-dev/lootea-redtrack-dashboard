@@ -23,6 +23,9 @@ export type Thresholds = {
   whaleShare: number;
   smallSampleFtd: number;
   legacyAlert: number;
+  /** Null = faixa desligada. Os dois precisam estar preenchidos para o alerta valer. */
+  redepPerFtdMin: number | null;
+  redepPerFtdMax: number | null;
 };
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
@@ -46,6 +49,8 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   whaleShare: 50,
   smallSampleFtd: 15,
   legacyAlert: 40,
+  redepPerFtdMin: null,
+  redepPerFtdMax: null,
 };
 
 export const TIME_ZONE = "America/Mexico_City";
@@ -72,6 +77,13 @@ export function isBuyerId(value: string): value is BuyerId {
 function requiredNumber(value: unknown, fallback: number): number {
   const number = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(number) || number < 0) return fallback;
+  return number;
+}
+
+function optionalNumber(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const number = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(number) || number < 0) return null;
   return number;
 }
 
@@ -104,5 +116,7 @@ export function sanitizeThresholds(value: unknown): Thresholds {
     whaleShare: requiredNumber(raw.whaleShare, DEFAULT_THRESHOLDS.whaleShare),
     smallSampleFtd: wholeNumber(raw.smallSampleFtd, DEFAULT_THRESHOLDS.smallSampleFtd, 0),
     legacyAlert: requiredNumber(raw.legacyAlert, DEFAULT_THRESHOLDS.legacyAlert),
+    redepPerFtdMin: optionalNumber(raw.redepPerFtdMin),
+    redepPerFtdMax: optionalNumber(raw.redepPerFtdMax),
   };
 }

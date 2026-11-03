@@ -131,6 +131,27 @@ test("baleia, amostra pequena e legacy são alertas e não trocam a ação", () 
   ]);
 });
 
+test("redeposits acima dos FTDs não descartam e a faixa só gera alerta", () => {
+  const many = decide(
+    sample({ day: 7, ftds: 16, redeposits: 40, cohortRoas: 2, scaleBar: 1.2, rpr: 0.4, topCustomerShare: 0.2 }),
+    limits({ redepPerFtdMin: 0.5, redepPerFtdMax: 2 }),
+  );
+  assert.equal(many.verdict, "escalar");
+  assert.ok(many.alerts.includes("aquisição baixa"));
+
+  const few = decide(
+    sample({ day: 2, ftds: 10, redeposits: 1 }),
+    limits({ redepPerFtdMin: 0.5, redepPerFtdMax: 2 }),
+  );
+  assert.equal(few.verdict, "manter");
+  assert.equal(few.motivo, "não mexer, não subir budget");
+  assert.ok(few.alerts.includes("pouca recorrência"));
+
+  const off = decide(sample({ day: 2, ftds: 10, redeposits: 40 }), limits({ redepPerFtdMin: 0.5 }));
+  assert.equal(off.alerts.includes("aquisição baixa"), false);
+  assert.equal(off.alerts.includes("pouca recorrência"), false);
+});
+
 test("no dia 7 a baleia impede o CBO porque o top cliente passa de 50%", () => {
   const decision = decide(
     sample({ day: 7, cohortRoas: 2, scaleBar: 1.2, ftds: 20, rpr: 0.4, topCustomerShare: 0.51, redeposits: 5 }),
