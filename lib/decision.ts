@@ -44,13 +44,6 @@ function alertsFor(input: DecisionInput, thresholds: Thresholds): string[] {
   if (top != null && top > thresholds.whaleShare) alerts.push("baleia: mais de 50% da receita");
   if (input.ftds < thresholds.smallSampleFtd) alerts.push("amostra pequena, não escalar");
   if (legacy != null && legacy > thresholds.legacyAlert) alerts.push("legacy acima de 40%");
-  const min = thresholds.redepPerFtdMin;
-  const max = thresholds.redepPerFtdMax;
-  if (min != null && max != null && input.ftds > 0) {
-    const ratio = input.redeposits / input.ftds;
-    if (ratio > max) alerts.push("aquisição baixa");
-    else if (ratio < min) alerts.push("pouca recorrência");
-  }
   return alerts;
 }
 

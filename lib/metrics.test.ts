@@ -328,6 +328,4 @@ test("critérios inválidos voltam para o padrão", () => {
   assert.equal(cleaned.scaleDay, 8);
   assert.equal(cleaned.checkpointRpr, 30);
   assert.equal(cleaned.discardCohort, DEFAULT_THRESHOLDS.discardCohort);
-  assert.equal(cleaned.redepPerFtdMin, null);
-  assert.equal(cleaned.redepPerFtdMax, null);
 });

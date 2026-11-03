@@ -14,41 +14,6 @@ type FieldProps = {
   onChange: (value: number) => void;
 };
 
-function OptionalField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number | null;
-  onChange: (value: number | null) => void;
-}) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      <input
-        type="number"
-        min="0"
-        step="0.1"
-        inputMode="decimal"
-        value={value ?? ""}
-        placeholder="não configurado"
-        onWheel={(event) => event.currentTarget.blur()}
-        onChange={(event) => {
-          const raw = event.target.value;
-          if (raw === "") {
-            onChange(null);
-            return;
-          }
-          const parsed = Number(raw);
-          if (Number.isFinite(parsed) && parsed >= 0) onChange(parsed);
-        }}
-      />
-      <small>{value == null ? "não configurado" : "ativo"}</small>
-    </label>
-  );
-}
-
 function Field({ label, value, step, onChange }: FieldProps) {
   return (
     <label className="field">
@@ -110,8 +75,6 @@ export default function SettingsPanel({ thresholds, onChange }: Props) {
           <Field label="Alerta de baleia acima de (%)" value={thresholds.whaleShare} step="1" onChange={(value) => update({ whaleShare: value })} />
           <Field label="Alerta de amostra abaixo de (FTDs)" value={thresholds.smallSampleFtd} step="1" onChange={(value) => update({ smallSampleFtd: Math.floor(value) })} />
           <Field label="Alerta de legacy acima de (%)" value={thresholds.legacyAlert} step="1" onChange={(value) => update({ legacyAlert: value })} />
-          <OptionalField label="Redep/FTD mínimo" value={thresholds.redepPerFtdMin} onChange={(value) => update({ redepPerFtdMin: value })} />
-          <OptionalField label="Redep/FTD máximo" value={thresholds.redepPerFtdMax} onChange={(value) => update({ redepPerFtdMax: value })} />
         </div>
       </div>
     </section>
