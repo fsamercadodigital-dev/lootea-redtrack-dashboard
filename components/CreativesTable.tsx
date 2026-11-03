@@ -61,18 +61,18 @@ const COLUMNS: Column[] = [
   { key: "name", label: "Criativo", title: "Nome normalizado", align: "left" },
   { key: "day", label: "Dia", title: "Dia 0 é o primeiro dia com gasto", align: "right" },
   { key: "spend", label: "Spend", title: "Custo", align: "right" },
-  { key: "deposits", label: "Depósitos", title: "convtype2", align: "right" },
-  { key: "depositRevenue", label: "Deposit Rev", title: "revenuetype2", align: "right" },
+  { key: "deposits", label: "Depósitos", title: "Depósitos no período", align: "right" },
+  { key: "depositRevenue", label: "Deposit Rev", title: "Receita dos depósitos", align: "right" },
   { key: "cpaDeposit", label: "CPA Deposit", title: "Custo ÷ depósitos", align: "right" },
   { key: "aovDeposit", label: "AOV Deposit", title: "Receita de depósitos ÷ depósitos", align: "right" },
-  { key: "ftds", label: "FTD", title: "convtype4", align: "right" },
-  { key: "redeposits", label: "Redeposit", title: "convtype7", align: "right" },
+  { key: "ftds", label: "FTD", title: "Primeiros depósitos", align: "right" },
+  { key: "redeposits", label: "Redeposit", title: "Depósitos depois do primeiro", align: "right" },
   { key: "cpaFtd", label: "CPA FTD", title: "Custo ÷ FTDs", align: "right" },
-  { key: "ftdRevenue", label: "Revenue FTD", title: "revenuetype4", align: "right" },
+  { key: "ftdRevenue", label: "Revenue FTD", title: "Receita dos primeiros depósitos", align: "right" },
   { key: "roas", label: "ROAS", title: "Receita de depósitos ÷ custo", align: "right" },
-  { key: "cpm", label: "CPM", title: "Custo ÷ impressões × 1000. Vazio sem impressões", align: "right" },
+  { key: "cpm", label: "CPM", title: "Custo por mil impressões. Vazio sem impressões", align: "right" },
   { key: "cpc", label: "CPC", title: "Custo ÷ cliques", align: "right" },
-  { key: "clicks", label: "Cliques no link", title: "clicks", align: "right" },
+  { key: "clicks", label: "Cliques no link", title: "Cliques no link", align: "right" },
   { key: "ctr", label: "CTR", title: "Cliques ÷ impressões. Vazio sem impressões", align: "right" },
   { key: "d1", label: "D1", title: "Gasto no primeiro dia", align: "right" },
   { key: "d2", label: "D2", title: "Gasto no segundo dia", align: "right" },
@@ -82,9 +82,7 @@ const COLUMNS: Column[] = [
 ];
 
 function rank(value: number | null): number | null {
-  if (value == null || Number.isNaN(value)) return null;
-  if (value === Number.POSITIVE_INFINITY) return Number.MAX_VALUE;
-  if (!Number.isFinite(value)) return null;
+  if (value == null || !Number.isFinite(value)) return null;
   return value;
 }
 

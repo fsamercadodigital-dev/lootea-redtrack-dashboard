@@ -143,10 +143,10 @@ export default function Dashboard() {
           </button>
           {infoOpen ? (
             <p className="info-pop" role="note">
-              Dia 0 é o primeiro dia com gasto, até hoje na Cidade do México. Gasto e FTDs somam todos os
-              criativos do filtro. ROAS e a barra usam os anúncios com gasto. Se Critérios exigir o conjunto
+              Dia 0 é o primeiro dia com gasto, até hoje na Cidade do México. Os cartões somam os
+              criativos do gestor e do período. Se Critérios exigir o conjunto
               [E], [F] ou [D] seguido de data, só esses entram na média.
-              Custo por anúncio é aproximado enquanto o RedTrack sincroniza custo por conjunto.
+              O custo por criativo é aproximado enquanto o RedTrack sincroniza o custo por conjunto.
             </p>
           ) : null}
         </div>
@@ -259,7 +259,7 @@ export default function Dashboard() {
           Critérios
         </button>
         {report?.cohortMode === "proxy" ? (
-          <p className="quiet">cohort indisponível – usando Ad Tracking</p>
+          <p className="quiet">coorte indisponível – usando o rastreamento do anúncio</p>
         ) : null}
       </div>
 

@@ -50,7 +50,7 @@ export default function SettingsPanel({ thresholds, onChange }: Props) {
         </div>
         <ol className="rules">
           <li>Dia 0: descartar com gasto alto sem cadastro ou sem depósito. Super Winner escala no mesmo dia.</li>
-          <li>Dias 1 e 2: manter, sem mexer no budget.</li>
+          <li>Dias 1 e 2: manter, sem mexer no orçamento.</li>
           <li>Até a véspera da decisão final: manter, e descartar só se o CPA passar de 2× a média sem redeposit.</li>
           <li>Da decisão final em diante: escalar em CBO se a coorte bater a barra, ou descartar se ficar abaixo de 0,8.</li>
         </ol>
@@ -69,9 +69,9 @@ export default function SettingsPanel({ thresholds, onChange }: Props) {
           <Field label="Super Winner: FTDs mínimos" value={thresholds.superWinnerFtd} step="1" onChange={(value) => update({ superWinnerFtd: Math.floor(value) })} />
           <Field label="Super Winner: CPA máximo (US$)" value={thresholds.superWinnerCpa} step="0.1" onChange={(value) => update({ superWinnerCpa: value })} />
           <Field label="Não mexer até o dia" value={thresholds.earlyDayEnd} step="1" onChange={(value) => update({ earlyDayEnd: Math.max(1, Math.floor(value)) })} />
-          <Field label="FTDs do checkpoint" value={thresholds.checkpointFtd} step="1" onChange={(value) => update({ checkpointFtd: Math.floor(value) })} />
-          <Field label="RPR do checkpoint (%)" value={thresholds.checkpointRpr} step="1" onChange={(value) => update({ checkpointRpr: value })} />
-          <Field label="ROAS cohort do checkpoint" value={thresholds.checkpointCohort} step="0.1" onChange={(value) => update({ checkpointCohort: value })} />
+          <Field label="FTDs da checagem" value={thresholds.checkpointFtd} step="1" onChange={(value) => update({ checkpointFtd: Math.floor(value) })} />
+          <Field label="RPR da checagem (%)" value={thresholds.checkpointRpr} step="1" onChange={(value) => update({ checkpointRpr: value })} />
+          <Field label="ROAS da coorte na checagem" value={thresholds.checkpointCohort} step="0.1" onChange={(value) => update({ checkpointCohort: value })} />
           <Field label="ROAS suspeito abaixo de" value={thresholds.suspectCohort} step="0.1" onChange={(value) => update({ suspectCohort: value })} />
           <Field label="Múltiplo do CPA médio para descarte" value={thresholds.cpaMultiple} step="0.1" onChange={(value) => update({ cpaMultiple: value })} />
           <Field label="Decisão final a partir do dia" value={thresholds.scaleDay} step="1" onChange={(value) => update({ scaleDay: Math.max(1, Math.floor(value)) })} />
@@ -79,10 +79,10 @@ export default function SettingsPanel({ thresholds, onChange }: Props) {
           <Field label="CBO: FTDs mínimos" value={thresholds.scaleFtd} step="1" onChange={(value) => update({ scaleFtd: Math.floor(value) })} />
           <Field label="CBO: RPR mínimo (%)" value={thresholds.scaleRpr} step="1" onChange={(value) => update({ scaleRpr: value })} />
           <Field label="CBO: top cliente máximo (%)" value={thresholds.scaleTopMax} step="1" onChange={(value) => update({ scaleTopMax: value })} />
-          <Field label="Descartar se ROAS cohort abaixo de" value={thresholds.discardCohort} step="0.1" onChange={(value) => update({ discardCohort: value })} />
+          <Field label="Descartar se o ROAS da coorte ficar abaixo de" value={thresholds.discardCohort} step="0.1" onChange={(value) => update({ discardCohort: value })} />
           <Field label="Alerta de baleia acima de (%)" value={thresholds.whaleShare} step="1" onChange={(value) => update({ whaleShare: value })} />
           <Field label="Alerta de amostra abaixo de (FTDs)" value={thresholds.smallSampleFtd} step="1" onChange={(value) => update({ smallSampleFtd: Math.floor(value) })} />
-          <Field label="Alerta de legacy acima de (%)" value={thresholds.legacyAlert} step="1" onChange={(value) => update({ legacyAlert: value })} />
+          <Field label="Alerta de legado acima de (%)" value={thresholds.legacyAlert} step="1" onChange={(value) => update({ legacyAlert: value })} />
         </div>
       </div>
     </section>

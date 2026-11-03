@@ -54,7 +54,7 @@ O custo por anúncio é aproximado, porque o RedTrack ainda reparte o custo do c
 
 ## Coorte
 
-O log traz `external_id` e os tipos FTD, Deposit e Redeposit, mas a receita da coorte por anúncio não fechou (os depósitos não amarraram no primeiro FTD). Por isso o painel avisa `cohort indisponível – usando Ad Tracking`: ROAS é `revenuetype2 ÷ gasto` e o RPR fica 100% se houve redeposit, senão 0%. Top cliente e legacy ficam vazios.
+O log traz `external_id` e os tipos FTD, Deposit e Redeposit, mas a receita da coorte por anúncio não fechou (os depósitos não amarraram no primeiro FTD). Por isso o painel avisa `coorte indisponível – usando o rastreamento do anúncio`: ROAS é `revenuetype2 ÷ gasto` e o RPR fica 100% se houve redeposit, senão 0%. Top cliente e legado ficam vazios.
 
 ## Decisão
 
@@ -65,6 +65,6 @@ Só entra na conta o conjunto cujo nome começa com `[E]`, `[F]` ou `[D]` e uma 
 3. Até a véspera do dia 7: manter. Descartar só se o CPA for ≥ 2× a média dos anúncios com tracking e não houver redeposit.
 4. Do dia 7 em diante: escalar em CBO se o ROAS cohort for ≥ média × 1,2, com FTD ≥ 15, RPR ≥ 25% e top cliente ≤ 50%. Descartar se o ROAS cohort for < 0,8. Senão, manter em ABO.
 
-Alertas (não mudam a ação): baleia acima de 50% da receita, menos de 15 FTDs, legacy acima de 40%. A média e a barra dos cartões ignoram anúncios sem tracking.
+Alertas (não mudam a ação): baleia acima de 50% da receita, menos de 15 FTDs, legado acima de 40%. A média usa os criativos com gasto, salvo quando Critérios exige a marcação do conjunto.
 
 `npm test` confere essas contas. `npx tsc --noEmit` e `npm run build` conferem o projeto.

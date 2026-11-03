@@ -31,7 +31,7 @@ function limits(overrides: Partial<Thresholds> = {}): Thresholds {
 test("sem o prefixo do conjunto não há veredito quando a regra está ligada", () => {
   const decision = decide(sample({ tracked: false, day: 0, adRoas: 5, ftds: 20 }), limits());
   assert.equal(decision.verdict, "sem-veredito");
-  assert.equal(decision.motivo, "sem tracking completo");
+  assert.equal(decision.motivo, "sem marcação de conjunto");
 });
 
 test("dia 0 descarta gasto de 10 sem cadastro e gasto de 15 sem depósito", () => {
@@ -57,7 +57,7 @@ test("Super Winner no dia 0 exige ROAS > 2, 15 FTDs e CPA até 7.50", () => {
 
   const roasShort = decide(sample({ day: 0, adRoas: 2, ftds: 15, cpaFtd: 7 }), limits());
   assert.equal(roasShort.verdict, "manter");
-  assert.equal(roasShort.motivo, "dia 0, sem kill e sem Super Winner");
+  assert.equal(roasShort.motivo, "dia 0, sem descarte e sem Super Winner");
 });
 
 test("dias 1 e 2 mantêm mesmo com ROAS ruim", () => {
@@ -66,8 +66,8 @@ test("dias 1 e 2 mantêm mesmo com ROAS ruim", () => {
     limits(),
   );
   assert.equal(decision.verdict, "manter");
-  assert.equal(decision.motivo, "não mexer, não subir budget");
-  assert.equal(decide(sample({ day: 2, cohortRoas: 0.1 }), limits()).motivo, "não mexer, não subir budget");
+  assert.equal(decision.motivo, "não mexer, não subir o orçamento");
+  assert.equal(decide(sample({ day: 2, cohortRoas: 0.1 }), limits()).motivo, "não mexer, não subir o orçamento");
 });
 
 test("dias 3 a 6 mantêm, com checkpoint, suspeito ou descarte por CPA", () => {
@@ -76,21 +76,21 @@ test("dias 3 a 6 mantêm, com checkpoint, suspeito ou descarte por CPA", () => {
     limits(),
   );
   assert.equal(ok.verdict, "manter");
-  assert.equal(ok.motivo, "pode subir budget dentro do ABO");
+  assert.equal(ok.motivo, "pode subir o orçamento no ABO");
 
   const suspect = decide(sample({ day: 5, ftds: 3, rpr: 0, cohortRoas: 0.59, redeposits: 1 }), limits());
   assert.equal(suspect.verdict, "manter");
   assert.equal(suspect.motivo, "suspeito");
 
   const quiet = decide(sample({ day: 3, ftds: 4, rpr: 0.1, cohortRoas: 1, redeposits: 1, cpaFtd: 12 }), limits());
-  assert.equal(quiet.motivo, "checkpoint dias 3–6");
+  assert.equal(quiet.motivo, "checagem dos dias 3–6");
 
   const killed = decide(
     sample({ day: 3, ftds: 2, cpaFtd: 16, accountAvgCpa: 8, redeposits: 0, rpr: 0, cohortRoas: 0.4 }),
     limits(),
   );
   assert.equal(killed.verdict, "descartar");
-  assert.equal(killed.motivo, "CPA ≥ 2× a média geral e zero redeposits");
+  assert.equal(killed.motivo, "CPA ≥ 2× a média geral e zero Redeposit");
 });
 
 test("dia 7 escala em CBO, descarta cohort abaixo de 0.8 ou fica no ABO", () => {
@@ -111,11 +111,11 @@ test("dia 7 escala em CBO, descarta cohort abaixo de 0.8 ou fica no ABO", () => 
 
   const low = decide(sample({ day: 8, cohortRoas: 0.79, ftds: 20, rpr: 0.4, redeposits: 3 }), limits());
   assert.equal(low.verdict, "descartar");
-  assert.equal(low.motivo, "ROAS cohort abaixo de 0.8");
+  assert.equal(low.motivo, "ROAS da coorte abaixo de 0,8");
 
   const hold = decide(sample({ day: 9, cohortRoas: 1, scaleBar: 1.5, ftds: 20, rpr: 0.4, redeposits: 3 }), limits());
   assert.equal(hold.verdict, "manter");
-  assert.equal(hold.motivo, "ABO budget baixo fixo");
+  assert.equal(hold.motivo, "ABO com orçamento baixo fixo");
 });
 
 test("baleia, amostra pequena e legacy são alertas e não trocam a ação", () => {
@@ -127,7 +127,7 @@ test("baleia, amostra pequena e legacy são alertas e não trocam a ação", () 
   assert.deepEqual(decision.alerts, [
     "baleia: mais de 50% da receita",
     "amostra pequena, não escalar",
-    "legacy acima de 40%",
+    "legado acima de 40%",
   ]);
 });
 
@@ -146,6 +146,6 @@ test("no dia 7 a baleia impede o CBO porque o top cliente passa de 50%", () => {
     limits(),
   );
   assert.equal(decision.verdict, "manter");
-  assert.equal(decision.motivo, "ABO budget baixo fixo");
+  assert.equal(decision.motivo, "ABO com orçamento baixo fixo");
   assert.ok(decision.alerts.includes("baleia: mais de 50% da receita"));
 });

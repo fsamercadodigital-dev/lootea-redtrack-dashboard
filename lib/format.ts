@@ -1,6 +1,5 @@
 export function formatUsd(value: number | null): string {
-  if (value == null || Number.isNaN(value)) return "—";
-  if (!Number.isFinite(value)) return "∞";
+  if (value == null || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -10,8 +9,7 @@ export function formatUsd(value: number | null): string {
 }
 
 export function formatRoas(value: number | null): string {
-  if (value == null || Number.isNaN(value)) return "—";
-  if (!Number.isFinite(value)) return "∞";
+  if (value == null || !Number.isFinite(value)) return "—";
   return value.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -19,6 +17,7 @@ export function formatRoas(value: number | null): string {
 }
 
 export function formatCount(value: number): string {
+  if (!Number.isFinite(value)) return "—";
   const whole = Math.abs(value - Math.round(value)) < 1e-6;
   return value.toLocaleString("en-US", {
     minimumFractionDigits: 0,
@@ -32,16 +31,14 @@ export function formatDay(day: number | null): string {
 }
 
 export function formatRatio(value: number | null): string {
-  if (value == null || Number.isNaN(value)) return "—";
-  if (!Number.isFinite(value)) return "∞";
+  if (value == null || !Number.isFinite(value)) return "—";
   return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export function formatPercent(value: number | null): string {
-  if (value == null || Number.isNaN(value)) return "—";
-  if (!Number.isFinite(value)) return "∞";
+  if (value == null || !Number.isFinite(value)) return "—";
   return `${(value * 100).toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })}%`;
 }

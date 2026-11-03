@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const buyerParam = request.nextUrl.searchParams.get("buyer") ?? "all";
   if (!isBuyerId(buyerParam)) {
     return NextResponse.json(
-      { ok: false, stage: "parâmetros", status: 400, message: "Comprador desconhecido." },
+      { ok: false, stage: "parâmetros", status: 400, message: "Gestor desconhecido." },
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }

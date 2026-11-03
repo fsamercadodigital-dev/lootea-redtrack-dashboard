@@ -4,6 +4,7 @@ import { campaignIdFor } from "./campaigns";
 import { DEFAULT_THRESHOLDS, sanitizeThresholds } from "./config";
 import { readReportRows } from "./report-body";
 import { addDays, mexicoToday, periodRange } from "./dates";
+import { formatCount, formatPercent, formatRoas, formatUsd } from "./format";
 import { buildCreativeRows, cpm, ctr, groupRows, summarize, type RawRow } from "./metrics";
 import { buildReportUrl, REPORT_FIELDS } from "./report-url";
 
@@ -374,4 +375,17 @@ test("critérios inválidos voltam para o padrão", () => {
   assert.equal(cleaned.scaleDay, 8);
   assert.equal(cleaned.checkpointRpr, 30);
   assert.equal(cleaned.discardCohort, DEFAULT_THRESHOLDS.discardCohort);
+});
+
+test("número ausente ou infinito vira traço, e CTR é porcentagem", () => {
+  for (const value of [null, Number.NaN, Number.POSITIVE_INFINITY]) {
+    assert.equal(formatUsd(value), "—");
+    assert.equal(formatRoas(value), "—");
+    assert.equal(formatPercent(value), "—");
+  }
+  assert.equal(formatUsd(0), "$0.00");
+  assert.equal(formatUsd(12.3), "$12.30");
+  assert.equal(formatRoas(2.4), "2.40");
+  assert.equal(formatPercent(0.025), "2.50%");
+  assert.equal(formatCount(Number.NaN), "—");
 });

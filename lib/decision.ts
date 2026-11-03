@@ -43,7 +43,7 @@ function alertsFor(input: DecisionInput, thresholds: Thresholds): string[] {
   const legacy = percent(input.legacyShare);
   if (top != null && top > thresholds.whaleShare) alerts.push("baleia: mais de 50% da receita");
   if (input.ftds < thresholds.smallSampleFtd) alerts.push("amostra pequena, não escalar");
-  if (legacy != null && legacy > thresholds.legacyAlert) alerts.push("legacy acima de 40%");
+  if (legacy != null && legacy > thresholds.legacyAlert) alerts.push("legado acima de 40%");
   return alerts;
 }
 
@@ -61,7 +61,7 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
   }
 
   if (!input.tracked) {
-    return withAlerts(input, thresholds, "sem-veredito", "sem tracking completo");
+    return withAlerts(input, thresholds, "sem-veredito", "sem marcação de conjunto");
   }
 
   if (input.day === 0) {
@@ -80,11 +80,11 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
     if (superWinner) {
       return withAlerts(input, thresholds, "escalar", "Super Winner – Surf Scaling hoje");
     }
-    return withAlerts(input, thresholds, "manter", "dia 0, sem kill e sem Super Winner");
+    return withAlerts(input, thresholds, "manter", "dia 0, sem descarte e sem Super Winner");
   }
 
   if (input.day >= 1 && input.day <= thresholds.earlyDayEnd) {
-    return withAlerts(input, thresholds, "manter", "não mexer, não subir budget");
+    return withAlerts(input, thresholds, "manter", "não mexer, não subir o orçamento");
   }
 
   const rprPct = percent(input.rpr);
@@ -99,7 +99,7 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
 
   if (input.day > thresholds.earlyDayEnd && input.day < thresholds.scaleDay) {
     if (expensiveAndDry) {
-      return withAlerts(input, thresholds, "descartar", "CPA ≥ 2× a média geral e zero redeposits");
+      return withAlerts(input, thresholds, "descartar", "CPA ≥ 2× a média geral e zero Redeposit");
     }
     const checkpointOk =
       input.ftds >= thresholds.checkpointFtd &&
@@ -112,15 +112,15 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
       input.cohortRoas < thresholds.suspectCohort &&
       rprPct === 0;
     const motivo = checkpointOk
-      ? "pode subir budget dentro do ABO"
+      ? "pode subir o orçamento no ABO"
       : suspect
         ? "suspeito"
-        : "checkpoint dias 3–6";
+        : "checagem dos dias 3–6";
     return withAlerts(input, thresholds, "manter", motivo);
   }
 
   if (expensiveAndDry) {
-    return withAlerts(input, thresholds, "descartar", "CPA ≥ 2× a média geral e zero redeposits");
+    return withAlerts(input, thresholds, "descartar", "CPA ≥ 2× a média geral e zero Redeposit");
   }
 
   const topOk = topPct == null || topPct <= thresholds.scaleTopMax;
@@ -138,8 +138,8 @@ export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
   }
 
   if (input.cohortRoas != null && input.cohortRoas < thresholds.discardCohort) {
-    return withAlerts(input, thresholds, "descartar", "ROAS cohort abaixo de 0.8");
+    return withAlerts(input, thresholds, "descartar", "ROAS da coorte abaixo de 0,8");
   }
 
-  return withAlerts(input, thresholds, "manter", "ABO budget baixo fixo");
+  return withAlerts(input, thresholds, "manter", "ABO com orçamento baixo fixo");
 }
