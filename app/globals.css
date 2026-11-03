@@ -104,7 +104,15 @@ h1, h2, p { margin: 0; }
   color: #111111;
 }
 .icon svg { width: 15px; height: 15px; }
-.updated { color: var(--muted); font-size: 12px; }
+.updated {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.stale-note { color: var(--muted); font-size: 12px; }
 
 .kpis {
   display: grid;

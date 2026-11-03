@@ -183,7 +183,12 @@ export default function Dashboard() {
               ))}
             </select>
           </label>
-          <p className="updated">{report ? `Atualizado ${formatClock(report.fetchedAt)}` : "Atualizado —"}</p>
+          <div className="updated">
+            <span>{report ? `Atualizado ${formatClock(report.fetchedAt)}` : "Atualizado —"}</span>
+            {report?.stale ? (
+              <span className="stale-note">RedTrack ocupado, mostrando dados das {formatClock(report.fetchedAt)}</span>
+            ) : null}
+          </div>
           <button
             type="button"
             className="icon"

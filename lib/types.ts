@@ -26,6 +26,8 @@ export type CohortMode = "full" | "proxy";
 export type ReportPayload = {
   ok: true;
   fetchedAt: string;
+  /** A busca falhou e esta resposta é a última boa que ainda estava em memória. */
+  stale?: boolean;
   today: string;
   from: string;
   to: string;
