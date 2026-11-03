@@ -108,9 +108,8 @@ test("soma o mesmo anúncio no mesmo dia e fica com o nome mais recente", () => 
   assert.equal(row.day, 3);
   assert.equal(row.spend, 50);
   assert.equal(row.ftds, 3);
-  assert.equal(row.tracked, false);
-  assert.equal(row.decision.verdict, "sem-veredito");
-  assert.equal(row.decision.motivo, "sem tracking completo");
+  assert.equal(row.tracked, true);
+  assert.notEqual(row.decision.verdict, "sem-veredito");
 
   const other = built.find((item) => item.adId === "999");
   assert.equal(other, undefined);
@@ -220,8 +219,9 @@ test("criativo sem clique e sem custo não ganha D1", () => {
     DEFAULT_THRESHOLDS,
   );
   assert.equal(row.day, null);
+  assert.equal(row.tracked, false);
   assert.equal(row.decision.verdict, "sem-veredito");
-  assert.equal(row.decision.motivo, "sem tracking completo");
+  assert.equal(row.decision.motivo, "sem dia com gasto");
 });
 
 test("resumo soma a conta e não a média dos ROAS", () => {
@@ -261,9 +261,22 @@ test("resumo soma a conta e não a média dos ROAS", () => {
   assert.equal(summary.spend, 100);
   assert.equal(summary.ftds, 5);
   assert.equal(summary.cpaFtd, 20);
-  assert.equal(summary.cohortRoas, null);
-  assert.equal(summary.scaleBar, null);
-  assert.equal(summary.semVeredito, 2);
+  assert.equal(summary.cohortRoas, 1.1);
+  assert.equal(summary.scaleBar, 1.32);
+  assert.equal(summary.semVeredito, 0);
+
+  const gated = buildCreativeRows(
+    grouped,
+    { from: "2026-11-03", to: "2026-11-03" },
+    "2026-11-03",
+    { ...DEFAULT_THRESHOLDS, requireAdsetTag: true },
+  );
+  const gatedSummary = summarize(gated, DEFAULT_THRESHOLDS);
+  assert.equal(gated.every((item) => item.decision.verdict === "sem-veredito"), true);
+  assert.equal(gatedSummary.spend, 100);
+  assert.equal(gatedSummary.ftds, 5);
+  assert.equal(gatedSummary.cohortRoas, null);
+  assert.equal(gatedSummary.scaleBar, null);
 });
 
 test("datas de período e fuso da Cidade do México", () => {

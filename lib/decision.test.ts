@@ -28,7 +28,7 @@ function limits(overrides: Partial<Thresholds> = {}): Thresholds {
   return { ...DEFAULT_THRESHOLDS, ...overrides };
 }
 
-test("sem o prefixo do conjunto não há veredito", () => {
+test("sem o prefixo do conjunto não há veredito quando a regra está ligada", () => {
   const decision = decide(sample({ tracked: false, day: 0, adRoas: 5, ftds: 20 }), limits());
   assert.equal(decision.verdict, "sem-veredito");
   assert.equal(decision.motivo, "sem tracking completo");

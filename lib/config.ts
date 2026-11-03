@@ -23,6 +23,8 @@ export type Thresholds = {
   whaleShare: number;
   smallSampleFtd: number;
   legacyAlert: number;
+  /** Quando ligado, só o conjunto [E]/[F]/[D] + data entra no veredito e nas médias. */
+  requireAdsetTag: boolean;
 };
 
 export const DEFAULT_THRESHOLDS: Thresholds = {
@@ -46,6 +48,7 @@ export const DEFAULT_THRESHOLDS: Thresholds = {
   whaleShare: 50,
   smallSampleFtd: 15,
   legacyAlert: 40,
+  requireAdsetTag: false,
 };
 
 export const TIME_ZONE = "America/Mexico_City";
@@ -73,6 +76,10 @@ function requiredNumber(value: unknown, fallback: number): number {
   const number = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(number) || number < 0) return fallback;
   return number;
+}
+
+function flag(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
 }
 
 function wholeNumber(value: unknown, fallback: number, min: number): number {
@@ -104,5 +111,6 @@ export function sanitizeThresholds(value: unknown): Thresholds {
     whaleShare: requiredNumber(raw.whaleShare, DEFAULT_THRESHOLDS.whaleShare),
     smallSampleFtd: wholeNumber(raw.smallSampleFtd, DEFAULT_THRESHOLDS.smallSampleFtd, 0),
     legacyAlert: requiredNumber(raw.legacyAlert, DEFAULT_THRESHOLDS.legacyAlert),
+    requireAdsetTag: flag(raw.requireAdsetTag, DEFAULT_THRESHOLDS.requireAdsetTag),
   };
 }

@@ -56,12 +56,12 @@ function withAlerts(input: DecisionInput, thresholds: Thresholds, verdict: Verdi
  * Dia 0 é o primeiro dia com gasto. Sem o prefixo de tracking no conjunto, não há veredito.
  */
 export function decide(input: DecisionInput, thresholds: Thresholds): Decision {
-  if (!input.tracked) {
-    return withAlerts(input, thresholds, "sem-veredito", "sem tracking completo");
-  }
-
   if (input.day == null) {
     return withAlerts(input, thresholds, "sem-veredito", "sem dia com gasto");
+  }
+
+  if (!input.tracked) {
+    return withAlerts(input, thresholds, "sem-veredito", "sem tracking completo");
   }
 
   if (input.day === 0) {

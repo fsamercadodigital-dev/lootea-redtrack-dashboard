@@ -54,6 +54,14 @@ export default function SettingsPanel({ thresholds, onChange }: Props) {
           <li>Até a véspera da decisão final: manter, e descartar só se o CPA passar de 2× a média sem redeposit.</li>
           <li>Da decisão final em diante: escalar em CBO se a coorte bater a barra, ou descartar se ficar abaixo de 0,8.</li>
         </ol>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={thresholds.requireAdsetTag}
+            onChange={(event) => update({ requireAdsetTag: event.target.checked })}
+          />
+          Exigir conjunto [E]/[F]/[D] + data
+        </label>
         <div className="fields">
           <Field label="Dia 0: gasto sem cadastro (US$)" value={thresholds.dia0SpendNoReg} step="1" onChange={(value) => update({ dia0SpendNoReg: value })} />
           <Field label="Dia 0: gasto sem depósito (US$)" value={thresholds.dia0SpendNoDeposit} step="1" onChange={(value) => update({ dia0SpendNoDeposit: value })} />

@@ -219,6 +219,15 @@ tbody tr:hover td { background: #fafafa; }
   gap: 12px;
   margin-top: 16px;
 }
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  color: #111;
+  font-size: 13px;
+}
+.check input { width: 14px; height: 14px; }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
 .field input {
   border-bottom: 1px solid var(--line);

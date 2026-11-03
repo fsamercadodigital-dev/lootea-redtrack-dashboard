@@ -144,7 +144,8 @@ export default function Dashboard() {
           {infoOpen ? (
             <p className="info-pop" role="note">
               Dia 0 é o primeiro dia com gasto, até hoje na Cidade do México. Gasto e FTDs somam todos os
-              criativos do filtro. ROAS e a barra usam só conjuntos com nome [E], [F] ou [D] seguido de data.
+              criativos do filtro. ROAS e a barra usam os anúncios com gasto. Se Critérios exigir o conjunto
+              [E], [F] ou [D] seguido de data, só esses entram na média.
               Custo por anúncio é aproximado enquanto o RedTrack sincroniza custo por conjunto.
             </p>
           ) : null}

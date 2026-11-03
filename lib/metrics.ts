@@ -214,7 +214,7 @@ export function buildCreativeRows(
       name: creative.name,
       adset: creative.adset,
       rawNames: creative.rawNames,
-      tracked: hasFullTracking(creative.adset),
+      tracked: thresholds.requireAdsetTag ? hasFullTracking(creative.adset) : dayNumber != null,
       day: dayNumber,
       spend,
       signups,
