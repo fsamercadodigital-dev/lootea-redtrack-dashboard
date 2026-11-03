@@ -134,8 +134,7 @@ export default function Dashboard() {
     <main className="page">
       <header className="bar">
         <div className="brand">
-          <h1 className="logo">Lootea</h1>
-          <span className="meta">Meta</span>
+          <img className="brand-logo" src="/lootea-meta.png" alt="Lootea · Meta" />
           <button
             type="button"
             className="info"

@@ -58,17 +58,11 @@ h1, h2, p { margin: 0; }
 
 .brand { gap: 10px; position: relative; }
 
-.logo {
-  background: #111111;
-  color: #ffffff;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+.brand-logo {
+  display: block;
+  height: 36px;
+  width: auto;
 }
-
-.meta { color: var(--muted); font-size: 13px; }
 
 .controls { gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .periods, .tabs { gap: 6px; flex-wrap: wrap; }
