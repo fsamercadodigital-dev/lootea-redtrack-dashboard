@@ -1,7 +1,7 @@
 "use client";
 
 import type { Verdict } from "@/lib/decision";
-import { formatCount, formatDay, formatPercent, formatRoas, formatUsd } from "@/lib/format";
+import { formatCount, formatDay, formatPercent, formatRatio, formatRoas, formatUsd } from "@/lib/format";
 import type { CreativeRow } from "@/lib/metrics";
 
 export type SortKey =
@@ -13,6 +13,7 @@ export type SortKey =
   | "cpaFtd"
   | "cohortRoas"
   | "rpr"
+  | "redepPerFtd"
   | "topCustomerShare"
   | "legacyShare"
   | "action"
@@ -62,6 +63,7 @@ const COLUMNS: Column[] = [
   { key: "cpaFtd", label: "CPA FTD", title: "Gasto ÷ FTDs", align: "right" },
   { key: "cohortRoas", label: "ROAS cohort", title: "Receita da coorte ÷ gasto. Sem coorte, usa o Ad Tracking", align: "right" },
   { key: "rpr", label: "RPR", title: "Percentual de FTDs com redeposit", align: "right" },
+  { key: "redepPerFtd", label: "Redep/FTD", title: "Redeposits ÷ FTDs no período", align: "right" },
   { key: "topCustomerShare", label: "Top cliente", title: "Maior cliente ÷ receita da coorte", align: "right" },
   { key: "legacyShare", label: "Legacy", title: "Receita do anúncio vinda de usuários de outra coorte", align: "right" },
   { key: "action", label: "Ação", title: "Decisão, motivo e alertas", align: "left" },
@@ -96,6 +98,8 @@ function readNumber(row: CreativeRow, key: SortKey): number | null {
       return row.cohortRoas;
     case "rpr":
       return row.rpr;
+    case "redepPerFtd":
+      return row.ftds > 0 ? row.redeposits / row.ftds : null;
     case "topCustomerShare":
       return row.topCustomerShare;
     case "legacyShare":
@@ -174,6 +178,7 @@ export default function CreativesTable({ rows, sortKey, sortDir, onSort }: Props
               <td className="num">{formatUsd(row.cpaFtd)}</td>
               <td className="num">{formatRoas(row.cohortRoas)}</td>
               <td className="num">{formatPercent(row.rpr)}</td>
+              <td className="num">{formatRatio(row.ftds > 0 ? row.redeposits / row.ftds : null)}</td>
               <td className="num">{formatPercent(row.topCustomerShare)}</td>
               <td className="num">{formatPercent(row.legacyShare)}</td>
               <td className="left">

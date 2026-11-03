@@ -31,6 +31,12 @@ export function formatDay(day: number | null): string {
   return `D${day}`;
 }
 
+export function formatRatio(value: number | null): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  if (!Number.isFinite(value)) return "∞";
+  return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function formatPercent(value: number | null): string {
   if (value == null || Number.isNaN(value)) return "—";
   if (!Number.isFinite(value)) return "∞";

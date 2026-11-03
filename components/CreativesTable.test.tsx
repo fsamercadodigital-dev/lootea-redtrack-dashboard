@@ -55,6 +55,7 @@ test("a tabela mostra o crachá, o motivo, o nome e o id", () => {
   assert.match(html, /LT-RIFA-001/);
   assert.match(html, /222/);
   assert.match(html, />D2</);
+  assert.match(html, /Redep\/FTD/);
 });
 
 test("o gasto maior vem primeiro quando a ordem é decrescente", () => {
